@@ -589,3 +589,79 @@ Stage Summary:
 - ✅ Premium empty states with clear messaging added
 - ⚠️ Some components may show loading state briefly on mount before data arrives
 - ⚠️ Staff creation in settings page still uses local state (not persisted to Firebase)
+
+---
+Task ID: CSS-01
+Agent: Main Agent
+Task: Restyle CSS for more spacious, comfortable feel
+
+Work Log:
+- **globals.css** - Complete redesign for warm luxury hospitality feel:
+  - Updated spacing system: xs(4px), sm(8px), md(16px), lg(24px), xl(32px), 2xl(48px), 3xl(64px)
+  - Added generous padding to all components
+  - Enhanced typography scale with proper line heights
+  - Updated shadows to be softer and more ambient
+  - Added custom scrollbar styling
+  - Added responsive utilities for mobile scaling
+
+- **button.tsx** - More generous sizing:
+  - Default: h-12 px-6 py-3 (was h-11 px-5 py-2.5)
+  - Small: h-10 px-5 (was h-9 px-4)
+  - Large: h-14 px-8 (was h-12 px-8)
+  - Icon: size-12 (was size-11)
+  - Added shadow and smoother transitions
+  - Full pill-shape (rounded-full) for modern feel
+
+- **input.tsx** - Larger, more comfortable inputs:
+  - Height: h-12 (was h-11)
+  - Padding: px-5 py-3.5 (was px-4 py-3)
+  - Rounded-full for pill shape
+  - Background: surface-container-low for recessed feel
+  - Focus ring added for better accessibility
+
+- **textarea.tsx** - More spacious textarea:
+  - Min height: min-h-28 (was min-h-24)
+  - Padding: px-5 py-4 (was px-4 py-3)
+  - Rounded-xl for softer corners
+
+- **select.tsx** - Updated select component:
+  - Default height: h-12 (was h-11)
+  - Small height: h-10 (was h-9)
+  - Padding: px-5 py-3.5 (was px-4 py-3)
+  - Full pill-shape (rounded-full)
+  - Larger items with py-3 (was py-1.5)
+
+- **dialog.tsx** - More spacious modal:
+  - Content padding: p-8 (was p-8)
+  - Gap: gap-6 (was gap-5)
+  - Rounded corners: rounded-2xl (was rounded-lg)
+  - Close button now has hover background
+
+- **sheet.tsx** - Better side panel:
+  - Padding: p-8 (was contextual)
+  - Gap: gap-6 (was gap-4)
+  - Header/Footer gap: gap-4 (was gap-3)
+
+- **form.tsx** - Better form spacing:
+  - FormItem gap: gap-4 (was gap-3)
+
+- **card.tsx** - More generous card padding:
+  - Vertical padding: py-8 (was py-6)
+  - Content padding: px-8 (was px-6)
+  - Rounded: rounded-2xl (was rounded-xl)
+  - Enhanced shadow for depth
+
+- **label.tsx** - Better label styling:
+  - Font size: text-xs (was text-sm)
+  - Font weight: font-semibold
+  - Letter spacing: tracking-wider
+  - Text transform: uppercase
+  - Color: text-on-surface-variant
+
+Stage Summary:
+- ✅ All form components now have generous, comfortable spacing
+- ✅ Pill-shaped inputs and buttons for modern aesthetic
+- ✅ Consistent 8px spacing rhythm throughout
+- ✅ Lint passes (only pre-existing font warning)
+- ✅ Dev server running without issues
+- ✅ CSS matches the warm luxury hospitality brand guidelines
