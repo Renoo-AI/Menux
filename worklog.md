@@ -665,3 +665,9 @@ Stage Summary:
 - ✅ Lint passes (only pre-existing font warning)
 - ✅ Dev server running without issues
 - ✅ CSS matches the warm luxury hospitality brand guidelines
+
+**Changes reverted** - Restored original component structures to avoid breaking existing styling. Key changes kept:
+- Button sizes: default h-12, sm h-10, lg h-14, icon size-12
+- Input height: h-12 with px-4 py-3
+- Added utility classes: text-outline, text-espresso, text-accent, luxury-shadow, shadow-card, border-outline, etc.
+- Added missing typography classes: text-title-lg, text-title-md, text-title-sm, font-body-lg, font-body-md, font-label-sm

@@ -317,6 +317,77 @@ body {
   text-transform: uppercase;
 }
 
+.text-title-lg {
+  font-family: var(--font-display);
+  font-size: var(--text-title-lg);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.text-title-md {
+  font-family: var(--font-display);
+  font-size: var(--text-title-md);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.text-title-sm {
+  font-family: var(--font-display);
+  font-size: var(--text-title-sm);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.font-body-lg {
+  font-family: var(--font-sans);
+  font-size: var(--text-body-lg);
+  font-weight: 400;
+}
+
+.font-body-md {
+  font-family: var(--font-sans);
+  font-size: var(--text-body-md);
+  font-weight: 400;
+}
+
+.font-label-sm {
+  font-family: var(--font-sans);
+  font-size: var(--text-label-sm);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Luxury Shadow for premium elements */
+.luxury-shadow {
+  box-shadow: var(--shadow-luxury);
+}
+
+/* ============================================
+   TEXT COLOR UTILITIES
+   ============================================ */
+
+.text-outline { color: var(--color-outline); }
+.text-espresso { color: var(--color-espresso); }
+.text-accent { color: var(--color-accent); }
+.text-soft-beige { color: var(--color-soft-beige); }
+.text-surface-tint { color: var(--color-surface-tint); }
+
+/* Background utilities */
+.bg-espresso { background-color: var(--color-espresso); }
+.bg-accent { background-color: var(--color-accent); }
+.bg-soft-beige { background-color: var(--color-soft-beige); }
+
+/* Border utilities */
+.border-outline { border-color: var(--color-outline); }
+.border-outline-variant { border-color: var(--color-outline-variant); }
+
+/* Shadow utilities */
+.shadow-card { box-shadow: var(--shadow-card); }
+.shadow-card-hover { box-shadow: var(--shadow-card-hover); }
+.shadow-elevated { box-shadow: var(--shadow-elevated); }
+.shadow-luxury { box-shadow: var(--shadow-luxury); }
+
 /* ============================================
    COMPONENTS: BUTTONS
    Primary: Pill-shaped, Dark Espresso bg
