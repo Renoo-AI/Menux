@@ -21,17 +21,23 @@ import {
   Grid3X3,
   Sparkles,
   Clock,
-  Shield
+  Shield,
+  BarChart3,
+  Crown
 } from 'lucide-react';
+
+type StaffRole = 'cashier' | 'owner' | 'admin';
 
 interface NavItem {
   href: string;
   label: string;
   icon: React.ReactNode;
+  roles?: StaffRole[]; // If not specified, visible to all roles
 }
 
 const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
+  { href: '/dashboard/owner', label: 'Analytics', icon: <BarChart3 className="w-5 h-5" />, roles: ['owner', 'admin'] },
   { href: '/dashboard/kitchen', label: 'Kitchen', icon: <ChefHat className="w-5 h-5" /> },
   { href: '/dashboard/floor-plan', label: 'Floor Plan', icon: <Grid3X3 className="w-5 h-5" /> },
   { href: '/dashboard/history', label: 'History', icon: <History className="w-5 h-5" /> },
@@ -39,20 +45,27 @@ const navItems: NavItem[] = [
   { href: '/dashboard/specials', label: 'Specials', icon: <Sparkles className="w-5 h-5" /> },
   { href: '/dashboard/tables', label: 'Tables', icon: <UtensilsCrossed className="w-5 h-5" /> },
   { href: '/dashboard/waitlist', label: 'Waitlist', icon: <Clock className="w-5 h-5" /> },
-  { href: '/dashboard/promotions', label: 'Promotions', icon: <Gift className="w-5 h-5" /> },
-  { href: '/dashboard/staff', label: 'Staff', icon: <Users className="w-5 h-5" /> },
-  { href: '/dashboard/feedback', label: 'Feedback', icon: <Star className="w-5 h-5" /> },
-  { href: '/dashboard/security', label: 'Security', icon: <Shield className="w-5 h-5" /> },
+  { href: '/dashboard/promotions', label: 'Promotions', icon: <Gift className="w-5 h-5" />, roles: ['owner', 'admin'] },
+  { href: '/dashboard/staff', label: 'Staff', icon: <Users className="w-5 h-5" />, roles: ['owner', 'admin'] },
+  { href: '/dashboard/feedback', label: 'Feedback', icon: <Star className="w-5 h-5" />, roles: ['owner', 'admin'] },
+  { href: '/dashboard/security', label: 'Security', icon: <Shield className="w-5 h-5" />, roles: ['owner', 'admin'] },
   { href: '/dashboard/logs', label: 'Activity', icon: <Receipt className="w-5 h-5" /> },
   { href: '/dashboard/settings', label: 'Settings', icon: <Settings className="w-5 h-5" /> },
 ];
 
 interface SideNavBarProps {
   restaurantName?: string;
+  userRole?: StaffRole;
 }
 
-export function SideNavBar({ restaurantName = 'Menux Pro' }: SideNavBarProps) {
+export function SideNavBar({ restaurantName = 'Menux Pro', userRole }: SideNavBarProps) {
   const pathname = usePathname();
+  
+  // Filter nav items based on user role
+  const filteredNavItems = navItems.filter(item => {
+    if (!item.roles) return true; // Visible to all if no roles specified
+    return item.roles.includes(userRole || 'cashier');
+  });
   
   return (
     <aside className="hidden md:flex flex-col w-64 h-screen py-6 gap-2 border-r border-outline-variant bg-surface-container-lowest sticky top-0">
@@ -64,9 +77,17 @@ export function SideNavBar({ restaurantName = 'Menux Pro' }: SideNavBarProps) {
         </p>
       </div>
       
+      {/* Role Badge */}
+      {userRole === 'owner' && (
+        <div className="mx-6 mb-4 px-3 py-2 bg-gradient-to-r from-[#C9A07E]/20 to-[#3A322D]/10 rounded-full flex items-center gap-2">
+          <Crown className="w-4 h-4 text-[#C9A07E]" />
+          <span className="text-xs font-medium text-[#3A322D]">Owner Access</span>
+        </div>
+      )}
+      
       {/* Navigation */}
       <nav className="flex-1 flex flex-col gap-1">
-        {navItems.map((item) => {
+        {filteredNavItems.map((item) => {
           const isActive = pathname === item.href || 
             (item.href !== '/dashboard' && pathname.startsWith(item.href));
           

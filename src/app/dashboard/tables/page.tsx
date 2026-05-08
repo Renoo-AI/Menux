@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Plus, Download, Eye, QrCode, X, AlertCircle, Loader2, Check, Search, AlertTriangle, Trash2, Share2 } from 'lucide-react';
+import { Plus, Download, Eye, QrCode, X, AlertCircle, Loader2, Check, Search, AlertTriangle, Trash2, Share2, Printer, Archive, CheckSquare, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DashboardLayout } from '@/components/layout';
@@ -19,6 +19,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import type { Table, TableState } from '@/types';
 
 // Demo data
@@ -63,6 +71,8 @@ export default function TablesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewTableForm, setShowNewTableForm] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [selectedTables, setSelectedTables] = useState<Set<string>>(new Set());
+  const [isBulkDownloading, setIsBulkDownloading] = useState(false);
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://menux.app';
   const { toast } = useToast();
   
@@ -277,6 +287,217 @@ export default function TablesPage() {
     }
   };
 
+  // Toggle table selection
+  const toggleTableSelection = (tableId: string) => {
+    setSelectedTables(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(tableId)) {
+        newSet.delete(tableId);
+      } else {
+        newSet.add(tableId);
+      }
+      return newSet;
+    });
+  };
+
+  // Select all tables
+  const selectAllTables = () => {
+    const allIds = new Set(filteredTables.map(t => t.id));
+    setSelectedTables(allIds);
+  };
+
+  // Clear selection
+  const clearSelection = () => {
+    setSelectedTables(new Set());
+  };
+
+  // Bulk download QR codes
+  const bulkDownloadQRCodes = useCallback(async () => {
+    if (selectedTables.size === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'No Tables Selected',
+        description: 'Please select at least one table to download.',
+      });
+      return;
+    }
+
+    setIsBulkDownloading(true);
+    
+    try {
+      const selectedTablesList = tables.filter(t => selectedTables.has(t.id));
+      
+      // Download each QR code individually
+      for (const table of selectedTablesList) {
+        await new Promise<void>((resolve) => {
+          const svgElement = document.querySelector(`[data-qr-table="${table.name}"] svg`);
+          if (!svgElement) {
+            resolve();
+            return;
+          }
+
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve();
+            return;
+          }
+
+          const size = 400;
+          canvas.width = size;
+          canvas.height = size;
+
+          const svgData = new XMLSerializer().serializeToString(svgElement);
+          const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+          const url = URL.createObjectURL(svgBlob);
+          
+          const img = new Image();
+          img.onload = () => {
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, size, size);
+            
+            const padding = 40;
+            const qrSize = size - (padding * 2);
+            ctx.drawImage(img, padding, padding, qrSize, qrSize);
+            
+            ctx.fillStyle = '#3A322D';
+            ctx.font = 'bold 24px system-ui, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(table.name, size / 2, size - 15);
+            
+            const link = document.createElement('a');
+            link.download = `menux-qr-${table.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            
+            URL.revokeObjectURL(url);
+            resolve();
+          };
+          img.onerror = () => resolve();
+          img.src = url;
+        });
+        
+        // Small delay between downloads
+        await new Promise(r => setTimeout(r, 300));
+      }
+      
+      toast({
+        title: 'QR Codes Downloaded',
+        description: `Downloaded ${selectedTablesList.length} QR code(s).`,
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to download QR codes.',
+      });
+    } finally {
+      setIsBulkDownloading(false);
+    }
+  }, [selectedTables, tables, toast]);
+
+  // Print QR codes
+  const printQRCodes = useCallback(() => {
+    if (selectedTables.size === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'No Tables Selected',
+        description: 'Please select at least one table to print.',
+      });
+      return;
+    }
+
+    const selectedTablesList = tables.filter(t => selectedTables.has(t.id));
+    
+    // Create print window
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Could not open print window. Please allow popups.',
+      });
+      return;
+    }
+
+    // Generate HTML content
+    const qrCodesHTML = selectedTablesList.map(table => {
+      const svgElement = document.querySelector(`[data-qr-table="${table.name}"] svg`);
+      const svgHTML = svgElement ? new XMLSerializer().serializeToString(svgElement) : '';
+      
+      return `
+        <div style="width: 50%; display: inline-block; padding: 20px; box-sizing: border-box; page-break-inside: avoid;">
+          <div style="border: 2px solid #EFE4D8; border-radius: 16px; padding: 20px; text-align: center; background: white;">
+            <div style="margin-bottom: 12px;">
+              ${svgHTML}
+            </div>
+            <h3 style="font-family: system-ui, sans-serif; font-size: 18px; font-weight: bold; color: #3A322D; margin: 0;">${table.name}</h3>
+            <p style="font-family: system-ui, sans-serif; font-size: 12px; color: #5A4A3D; margin: 4px 0 0 0;">${table.label || ''}</p>
+            <p style="font-family: system-ui, sans-serif; font-size: 10px; color: #7A6A5D; margin: 8px 0 0 0;">Scan to view menu</p>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Menux QR Codes - Print</title>
+          <style>
+            @media print {
+              body { margin: 0; }
+              @page { margin: 20mm; }
+            }
+            body {
+              font-family: system-ui, sans-serif;
+              background: #f5f5f5;
+              margin: 0;
+              padding: 20px;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 20px;
+              padding-bottom: 20px;
+              border-bottom: 1px solid #EFE4D8;
+            }
+            .header h1 {
+              font-size: 24px;
+              color: #3A322D;
+              margin: 0;
+            }
+            .header p {
+              font-size: 12px;
+              color: #5A4A3D;
+              margin: 8px 0 0 0;
+            }
+            .qr-grid {
+              display: flex;
+              flex-wrap: wrap;
+              margin: -10px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Menux - Table QR Codes</h1>
+            <p>${selectedTablesList.length} QR code(s) • Generated on ${new Date().toLocaleDateString()}</p>
+          </div>
+          <div class="qr-grid">
+            ${qrCodesHTML}
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+              window.onafterprint = function() { window.close(); };
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  }, [selectedTables, tables, toast]);
+
   const getFieldError = (fieldName: keyof NewTableFormValues) => {
     return touched[fieldName] && errors[fieldName];
   };
@@ -333,13 +554,75 @@ export default function TablesPage() {
               </p>
             )}
           </div>
-          <Button 
-            className="bg-primary text-on-primary hover:opacity-90 transition-all duration-300 hover:scale-105 shrink-0"
-            onClick={() => setShowNewTableForm(true)}
+          
+          <div className="flex items-center gap-3">
+            {/* Bulk Actions */}
+            {selectedTables.size > 0 && (
+              <div className="flex items-center gap-2 animate-fade-in">
+                <span className="text-sm text-[#5A4A3D] bg-[#C9A07E]/20 px-3 py-1 rounded-full">
+                  {selectedTables.size} selected
+                </span>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="rounded-full border-[#EFE4D8]"
+                  onClick={bulkDownloadQRCodes}
+                  disabled={isBulkDownloading}
+                >
+                  {isBulkDownloading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  Download All
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="rounded-full border-[#EFE4D8]"
+                  onClick={printQRCodes}
+                >
+                  <Printer className="w-4 h-4 mr-2" />
+                  Print
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="rounded-full text-[#5A4A3D]"
+                  onClick={clearSelection}
+                >
+                  Clear
+                </Button>
+              </div>
+            )}
+            
+            <Button 
+              className="bg-primary text-on-primary hover:opacity-90 transition-all duration-300 hover:scale-105 shrink-0"
+              onClick={() => setShowNewTableForm(true)}
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Create New Table
+            </Button>
+          </div>
+        </div>
+        
+        {/* Selection Controls */}
+        <div className="flex items-center justify-between mb-4 px-2">
+          <button
+            onClick={selectedTables.size === filteredTables.length ? clearSelection : selectAllTables}
+            className="flex items-center gap-2 text-sm text-[#5A4A3D] hover:text-[#3A322D] transition-colors"
           >
-            <Plus className="w-5 h-5 mr-2" />
-            Create New Table
-          </Button>
+            {selectedTables.size === filteredTables.length ? (
+              <CheckSquare className="w-4 h-4 text-[#C9A07E]" />
+            ) : (
+              <Square className="w-4 h-4" />
+            )}
+            {selectedTables.size === filteredTables.length ? 'Deselect All' : 'Select All'}
+          </button>
+          
+          <div className="text-sm text-[#5A4A3D]">
+            {tables.length} total tables
+          </div>
         </div>
 
         {/* New Table Form Modal */}
@@ -473,14 +756,30 @@ export default function TablesPage() {
             return (
               <div
                 key={table.id}
-                className={`bg-surface rounded-xl p-6 shadow-card border border-surface-container-low flex flex-col h-full hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group ${
-                  table.state === 'OFFLINE' ? 'opacity-60 grayscale-[0.5]' : ''
-                }`}
+                className={`bg-surface rounded-xl p-6 shadow-card border flex flex-col h-full hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group cursor-pointer ${
+                  selectedTables.has(table.id) 
+                    ? 'border-[#C9A07E] ring-2 ring-[#C9A07E]/30' 
+                    : 'border-surface-container-low'
+                } ${table.state === 'OFFLINE' ? 'opacity-60 grayscale-[0.5]' : ''}`}
+                onClick={() => toggleTableSelection(table.id)}
               >
                 <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="font-display text-title-sm text-primary group-hover:text-secondary transition-colors">{table.name}</h3>
-                    <p className="text-on-surface-variant text-sm">{table.label}</p>
+                  <div className="flex items-center gap-3">\n                    {/* Selection Checkbox */}
+                    <div 
+                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                        selectedTables.has(table.id)
+                          ? 'bg-[#C9A07E] border-[#C9A07E]'
+                          : 'border-[#EFE4D8] group-hover:border-[#C9A07E]/50'
+                      }`}
+                    >
+                      {selectedTables.has(table.id) && (
+                        <Check className="w-4 h-4 text-white" />
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="font-display text-title-sm text-primary group-hover:text-secondary transition-colors">{table.name}</h3>
+                      <p className="text-on-surface-variant text-sm">{table.label}</p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-label-caps font-label-caps text-on-surface-variant mr-1">
