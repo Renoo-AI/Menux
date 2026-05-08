@@ -1,14 +1,16 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Plus, Download, Eye, QrCode, X, AlertCircle, Loader2, Check, Search, AlertTriangle, Trash2, Share2, Printer, Archive, CheckSquare, Square } from 'lucide-react';
+import { Plus, Download, Eye, X, AlertCircle, Loader2, Check, Search, AlertTriangle, Trash2, Share2, Printer, CheckSquare, Square, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DashboardLayout } from '@/components/layout';
 import { TopAppBar } from '@/components/layout';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { useToast } from '@/hooks/use-toast';
+import { useStaffSession } from '@/contexts/StaffSessionContext';
+import { auth } from '@/lib/firebase';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,25 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import type { Table, TableState } from '@/types';
-
-// Demo data
-const demoTables: Table[] = [
-  { id: '1', restaurantId: 'demo', name: 'T-01', label: 'Window Side', seats: 4, state: 'ACTIVE', qrCodeUrl: '/r/demo/t/T-01', currentOrderId: 'order-1', createdAt: new Date(), updatedAt: new Date() },
-  { id: '2', restaurantId: 'demo', name: 'T-02', label: 'Window Side', seats: 2, state: 'AVAILABLE', qrCodeUrl: '/r/demo/t/T-02', createdAt: new Date(), updatedAt: new Date() },
-  { id: '3', restaurantId: 'demo', name: 'B-01', label: 'Bar Stool', seats: 1, state: 'AVAILABLE', qrCodeUrl: '/r/demo/t/B-01', createdAt: new Date(), updatedAt: new Date() },
-  { id: '4', restaurantId: 'demo', name: 'T-03', label: 'Booth Seat', seats: 6, state: 'OFFLINE', qrCodeUrl: '/r/demo/t/T-03', createdAt: new Date(), updatedAt: new Date() },
-  { id: '5', restaurantId: 'demo', name: 'T-04', label: 'Patio', seats: 4, state: 'AVAILABLE', qrCodeUrl: '/r/demo/t/T-04', createdAt: new Date(), updatedAt: new Date() },
-  { id: '6', restaurantId: 'demo', name: 'T-05', label: 'Main Hall', seats: 2, state: 'ACTIVE', qrCodeUrl: '/r/demo/t/T-05', currentOrderId: 'order-2', createdAt: new Date(), updatedAt: new Date() },
-];
+import type { Table, TableStatus } from '@/types';
 
 interface NewTableFormValues {
   name: string;
@@ -67,12 +51,18 @@ const formConfig = {
 };
 
 export default function TablesPage() {
-  const [tables, setTables] = useState<Table[]>(demoTables);
+  const { session } = useStaffSession();
+  const restaurantId = session?.restaurantId;
+  const restaurantSlug = session?.restaurantSlug;
+  
+  const [tables, setTables] = useState<Table[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewTableForm, setShowNewTableForm] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [selectedTables, setSelectedTables] = useState<Set<string>>(new Set());
   const [isBulkDownloading, setIsBulkDownloading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://menux.app';
   const { toast } = useToast();
   
@@ -91,6 +81,35 @@ export default function TablesPage() {
     resetForm,
   } = useFormValidation<NewTableFormValues>(initialFormValues, formConfig);
 
+  // Load tables from Firebase
+  const loadTables = useCallback(async () => {
+    if (!restaurantId) return;
+    
+    setIsLoading(true);
+    setLoadError(null);
+    
+    try {
+      const response = await fetch(`/api/tables?restaurantId=${restaurantId}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to load tables');
+      }
+      
+      const data = await response.json();
+      setTables(data.tables || []);
+    } catch (error) {
+      console.error('Error loading tables:', error);
+      setLoadError('Failed to load tables. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [restaurantId]);
+
+  // Load tables on mount
+  useEffect(() => {
+    loadTables();
+  }, [loadTables]);
+
   // Filter tables by search query
   const filteredTables = tables.filter(table => {
     const matchesSearch = table.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -98,37 +117,88 @@ export default function TablesPage() {
     return matchesSearch;
   });
 
-  const getStateStyle = (state: TableState) => {
-    switch (state) {
+  const getStatusStyle = (status: TableStatus) => {
+    switch (status) {
       case 'ACTIVE':
-        return { bg: 'bg-secondary-container', text: 'text-on-secondary-container', dot: 'bg-secondary', label: 'ACTIVE' };
-      case 'AVAILABLE':
+      case 'NEW_ORDER':
+        return { bg: 'bg-secondary-container', text: 'text-on-secondary-container', dot: 'bg-secondary', label: status };
+      case 'EMPTY':
         return { bg: 'bg-surface-container-high', text: 'text-primary', dot: 'bg-outline-variant', label: 'AVAILABLE' };
+      case 'AWAITING_PAYMENT':
+        return { bg: 'bg-tertiary-container', text: 'text-on-tertiary-container', dot: 'bg-tertiary', label: 'AWAITING PAYMENT' };
       case 'OFFLINE':
         return { bg: 'bg-error-container', text: 'text-on-error-container', dot: 'bg-error', label: 'OFFLINE' };
       default:
-        return { bg: 'bg-surface-container-high', text: 'text-primary', dot: 'bg-outline-variant', label: state };
+        return { bg: 'bg-surface-container-high', text: 'text-primary', dot: 'bg-outline-variant', label: status };
     }
   };
 
-  const toggleTableState = (tableId: string) => {
+  const toggleTableStatus = async (tableId: string) => {
     const table = tables.find(t => t.id === tableId);
     if (!table) return;
     
-    setTables(tables.map(table => {
-      if (table.id === tableId) {
-        const newState = table.state === 'OFFLINE' ? 'AVAILABLE' : 
-                         table.state === 'AVAILABLE' ? 'OFFLINE' : table.state;
-        
+    // Prevent toggling if table has active order
+    if (table.status === 'ACTIVE' || table.status === 'NEW_ORDER' || table.status === 'AWAITING_PAYMENT') {
+      toast({
+        variant: 'destructive',
+        title: 'Cannot Toggle Status',
+        description: `${table.name} has an active order. Close the order first.`,
+      });
+      return;
+    }
+    
+    const newStatus = table.status === 'OFFLINE' ? 'EMPTY' : 'OFFLINE';
+    
+    try {
+      const user = auth.currentUser;
+      const token = await user?.getIdToken();
+      
+      if (!token) {
         toast({
-          title: `Table ${newState === 'OFFLINE' ? 'Offline' : 'Online'}`,
-          description: `${table.name} is now ${newState === 'OFFLINE' ? 'offline and hidden from customers' : 'available for seating'}.`,
+          variant: 'destructive',
+          title: 'Authentication Required',
+          description: 'Please log in to update tables.',
         });
-        
-        return { ...table, state: newState as TableState };
+        return;
       }
-      return table;
-    }));
+      
+      const response = await fetch('/api/tables', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          id: tableId,
+          status: newStatus,
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update table');
+      }
+      
+      // Update local state
+      setTables(tables.map(t => {
+        if (t.id === tableId) {
+          return { ...t, status: newStatus as TableStatus };
+        }
+        return t;
+      }));
+      
+      toast({
+        title: `Table ${newStatus === 'OFFLINE' ? 'Offline' : 'Online'}`,
+        description: `${table.name} is now ${newStatus === 'OFFLINE' ? 'offline and hidden from customers' : 'available for seating'}.`,
+      });
+    } catch (error) {
+      console.error('Error toggling table status:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to update table status.',
+      });
+    }
   };
 
   // Download QR code as PNG
@@ -217,20 +287,60 @@ export default function TablesPage() {
   }, [baseUrl, toast]);
 
   const onCreateTable = useCallback(async () => {
+    if (!restaurantId) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Restaurant ID not found. Please log in again.',
+      });
+      return;
+    }
+    
     setIsCreating(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      const user = auth.currentUser;
+      const token = await user?.getIdToken();
       
+      if (!token) {
+        toast({
+          variant: 'destructive',
+          title: 'Authentication Required',
+          description: 'Please log in to create tables.',
+        });
+        return;
+      }
+      
+      const response = await fetch('/api/tables', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          restaurantId,
+          name: values.name.toUpperCase(),
+          label: values.label || '',
+          seats: values.seats,
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create table');
+      }
+      
+      const data = await response.json();
+      
+      // Add new table to local state
       const newTable: Table = {
-        id: `t-${Date.now()}`,
-        restaurantId: 'demo',
+        id: data.id,
+        restaurantId,
         name: values.name.toUpperCase(),
-        label: values.label || 'Main Hall',
+        label: values.label || '',
         seats: values.seats,
-        state: 'AVAILABLE',
-        qrCodeUrl: `/r/demo/t/${values.name.toUpperCase()}`,
+        status: 'EMPTY',
+        qrCodeUrl: data.table?.qrCodeUrl || `/r/${restaurantSlug}/t/${values.name.toUpperCase()}`,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -244,15 +354,16 @@ export default function TablesPage() {
         description: `${newTable.name} has been added successfully with a unique QR code.`,
       });
     } catch (error) {
+      console.error('Error creating table:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to create table. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to create table. Please try again.',
       });
     } finally {
       setIsCreating(false);
     }
-  }, [values, resetForm, toast]);
+  }, [values, resetForm, toast, restaurantId, restaurantSlug]);
 
   const handleDeleteClick = (table: Table) => {
     setTableToDelete(table);
@@ -265,8 +376,29 @@ export default function TablesPage() {
     setIsDeleting(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const user = auth.currentUser;
+      const token = await user?.getIdToken();
+      
+      if (!token) {
+        toast({
+          variant: 'destructive',
+          title: 'Authentication Required',
+          description: 'Please log in to delete tables.',
+        });
+        return;
+      }
+      
+      const response = await fetch(`/api/tables?id=${tableToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete table');
+      }
       
       setTables(prev => prev.filter(table => table.id !== tableToDelete.id));
       setShowDeleteDialog(false);
@@ -276,10 +408,11 @@ export default function TablesPage() {
         description: `${tableToDelete.name} has been removed from your floor plan.`,
       });
     } catch (error) {
+      console.error('Error deleting table:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to delete table. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to delete table. Please try again.',
       });
     } finally {
       setIsDeleting(false);
@@ -512,13 +645,83 @@ export default function TablesPage() {
     return `${baseClasses} border-outline-variant focus:border-secondary focus:ring-2 focus:ring-secondary-fixed/20`;
   };
 
+  // Show loading state while fetching
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <TopAppBar
+          title="Table & QR Management"
+          subtitle="Manage table access points"
+          showSearch={false}
+          user={{ name: session?.staffName || 'Manager', role: session?.role || 'manager' }}
+        />
+        <div className="p-6 md:p-10 max-w-7xl w-full mx-auto">
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="w-10 h-10 text-secondary animate-spin mb-4" />
+            <p className="text-on-surface-variant">Loading tables...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Show error state
+  if (loadError) {
+    return (
+      <DashboardLayout>
+        <TopAppBar
+          title="Table & QR Management"
+          subtitle="Manage table access points"
+          showSearch={false}
+          user={{ name: session?.staffName || 'Manager', role: session?.role || 'manager' }}
+        />
+        <div className="p-6 md:p-10 max-w-7xl w-full mx-auto">
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-16 h-16 bg-error-container rounded-full flex items-center justify-center mb-4">
+              <AlertCircle className="w-8 h-8 text-error" />
+            </div>
+            <h3 className="font-display text-title-sm text-primary mb-2">Failed to Load Tables</h3>
+            <p className="text-on-surface-variant mb-4">{loadError}</p>
+            <Button onClick={loadTables} className="bg-primary text-on-primary">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Retry
+            </Button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Show message if no restaurant
+  if (!restaurantId) {
+    return (
+      <DashboardLayout>
+        <TopAppBar
+          title="Table & QR Management"
+          subtitle="Manage table access points"
+          showSearch={false}
+          user={{ name: session?.staffName || 'Manager', role: session?.role || 'manager' }}
+        />
+        <div className="p-6 md:p-10 max-w-7xl w-full mx-auto">
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-16 h-16 bg-surface-container-high rounded-full flex items-center justify-center mb-4">
+              <AlertCircle className="w-8 h-8 text-on-surface-variant" />
+            </div>
+            <h3 className="font-display text-title-sm text-primary mb-2">No Restaurant Selected</h3>
+            <p className="text-on-surface-variant">Please log in to manage tables.</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <TopAppBar
         title="Table & QR Management"
         subtitle="Manage table access points"
         showSearch={false}
-        user={{ name: 'Manager', role: 'manager' }}
+        user={{ name: session?.staffName || 'Manager', role: session?.role || 'manager' }}
       />
 
       <div className="p-6 md:p-10 max-w-7xl w-full mx-auto animate-fade-in">
@@ -550,7 +753,7 @@ export default function TablesPage() {
             {/* Search Results Count */}
             {searchQuery && (
               <p className="text-on-surface-variant text-sm">
-                Found <strong className="text-primary">{filteredTables.length}</strong> table{filteredTables.length !== 1 ? 's' : ''} matching "{searchQuery}"
+                Found <strong className="text-primary">{filteredTables.length}</strong> table{filteredTables.length !== 1 ? 's' : ''} matching &quot;{searchQuery}&quot;
               </p>
             )}
           </div>
@@ -612,12 +815,12 @@ export default function TablesPage() {
             onClick={selectedTables.size === filteredTables.length ? clearSelection : selectAllTables}
             className="flex items-center gap-2 text-sm text-[#5A4A3D] hover:text-[#3A322D] transition-colors"
           >
-            {selectedTables.size === filteredTables.length ? (
+            {selectedTables.size === filteredTables.length && filteredTables.length > 0 ? (
               <CheckSquare className="w-4 h-4 text-[#C9A07E]" />
             ) : (
               <Square className="w-4 h-4" />
             )}
-            {selectedTables.size === filteredTables.length ? 'Deselect All' : 'Select All'}
+            {selectedTables.size === filteredTables.length && filteredTables.length > 0 ? 'Deselect All' : 'Select All'}
           </button>
           
           <div className="text-sm text-[#5A4A3D]">
@@ -667,7 +870,7 @@ export default function TablesPage() {
                     </p>
                   )}
                   <p className="text-on-surface-variant text-xs mt-1">
-                    Short identifier (max 10 characters)
+                    Short identifier (max 10 characters, letters, numbers, hyphens only)
                   </p>
                 </div>
 
@@ -748,146 +951,193 @@ export default function TablesPage() {
         )}
 
         {/* Table Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children">
-          {filteredTables.map((table) => {
-            const stateStyle = getStateStyle(table.state);
-            const qrUrl = `${baseUrl}${table.qrCodeUrl}`;
+        {filteredTables.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children">
+            {filteredTables.map((table) => {
+              const statusStyle = getStatusStyle(table.status);
+              const qrUrl = `${baseUrl}${table.qrCodeUrl}`;
+              const isOffline = table.status === 'OFFLINE';
+              const hasActiveOrder = table.status === 'ACTIVE' || table.status === 'NEW_ORDER' || table.status === 'AWAITING_PAYMENT';
 
-            return (
-              <div
-                key={table.id}
-                className={`bg-surface rounded-xl p-6 shadow-card border flex flex-col h-full hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group cursor-pointer ${
-                  selectedTables.has(table.id) 
-                    ? 'border-[#C9A07E] ring-2 ring-[#C9A07E]/30' 
-                    : 'border-surface-container-low'
-                } ${table.state === 'OFFLINE' ? 'opacity-60 grayscale-[0.5]' : ''}`}
-                onClick={() => toggleTableSelection(table.id)}
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center gap-3">\n                    {/* Selection Checkbox */}
-                    <div 
-                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                        selectedTables.has(table.id)
-                          ? 'bg-[#C9A07E] border-[#C9A07E]'
-                          : 'border-[#EFE4D8] group-hover:border-[#C9A07E]/50'
-                      }`}
-                    >
-                      {selectedTables.has(table.id) && (
-                        <Check className="w-4 h-4 text-white" />
-                      )}
+              return (
+                <div
+                  key={table.id}
+                  className={`bg-surface rounded-xl p-6 shadow-card border flex flex-col h-full hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group cursor-pointer ${
+                    selectedTables.has(table.id) 
+                      ? 'border-[#C9A07E] ring-2 ring-[#C9A07E]/30' 
+                      : 'border-surface-container-low'
+                  } ${isOffline ? 'opacity-60 grayscale-[0.5]' : ''}`}
+                  onClick={() => toggleTableSelection(table.id)}
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-3">
+                      {/* Selection Checkbox */}
+                      <div 
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                          selectedTables.has(table.id)
+                            ? 'bg-[#C9A07E] border-[#C9A07E]'
+                            : 'border-[#EFE4D8] group-hover:border-[#C9A07E]/50'
+                        }`}
+                      >
+                        {selectedTables.has(table.id) && (
+                          <Check className="w-4 h-4 text-white" />
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="font-display text-title-sm text-primary group-hover:text-secondary transition-colors">{table.name}</h3>
+                        <p className="text-on-surface-variant text-sm">{table.label || `${table.seats} seats`}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-display text-title-sm text-primary group-hover:text-secondary transition-colors">{table.name}</h3>
-                      <p className="text-on-surface-variant text-sm">{table.label}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-label-caps font-label-caps text-on-surface-variant mr-1">
-                      {table.state === 'OFFLINE' ? 'Offline' : 'Online'}
-                    </span>
-                    <button
-                      onClick={() => toggleTableState(table.id)}
-                      className={`relative inline-block w-10 h-6 rounded-full transition-colors hover:scale-105 ${
-                        table.state !== 'OFFLINE' ? 'bg-secondary' : 'bg-surface-container-high'
-                      }`}
-                    >
-                      <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform shadow-sm ${
-                        table.state !== 'OFFLINE' ? 'translate-x-5' : 'translate-x-1'
-                      }`} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* QR Code */}
-                <div className="flex-1 flex justify-center items-center py-4 bg-surface-container-low rounded-lg mb-4 group-hover:bg-surface-container transition-colors" data-qr-table={table.name}>
-                  <div className="w-32 h-32 bg-white rounded flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
-                    <QRCodeSVG value={qrUrl} size={120} level="H" />
-                  </div>
-                </div>
-
-                {/* Status & Actions */}
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className={`${stateStyle.bg} ${stateStyle.text} px-3 py-1 rounded-full font-label-caps text-label-caps flex items-center`}>
-                      <span className={`w-2 h-2 ${stateStyle.dot} rounded-full mr-2 ${table.state === 'ACTIVE' ? 'animate-pulse' : ''}`} />
-                      {stateStyle.label}
-                    </span>
                     <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => downloadQRCode(table.name, table.qrCodeUrl)}
-                        className="p-2 rounded-full bg-surface-container-low text-primary hover:bg-secondary-fixed hover:text-on-secondary-fixed-variant transition-all duration-300 hover:scale-110"
-                        title="Download QR Code"
+                      <span className="text-label-caps font-label-caps text-on-surface-variant mr-1">
+                        {isOffline ? 'Offline' : 'Online'}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleTableStatus(table.id);
+                        }}
+                        className={`relative inline-block w-10 h-6 rounded-full transition-colors hover:scale-105 ${
+                          !isOffline ? 'bg-secondary' : 'bg-surface-container-high'
+                        }`}
                       >
-                        <Download className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => shareQRCode(table.name, table.qrCodeUrl)}
-                        className="p-2 rounded-full bg-surface-container-low text-primary hover:bg-secondary-fixed hover:text-on-secondary-fixed-variant transition-all duration-300 hover:scale-110"
-                        title="Share Link"
-                      >
-                        <Share2 className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteClick(table)}
-                        className="p-2 rounded-full bg-surface-container-low text-error hover:bg-error-container transition-all duration-300 hover:scale-110"
-                        title="Delete Table"
-                      >
-                        <Trash2 className="w-4 h-4" />
+                        <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform shadow-sm ${
+                          !isOffline ? 'translate-x-5' : 'translate-x-1'
+                        }`} />
                       </button>
                     </div>
                   </div>
 
-                  {table.state === 'ACTIVE' ? (
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button size="sm" className="bg-primary text-on-primary hover:opacity-90">VIEW ORDER</Button>
-                      <Button size="sm" variant="outline" className="border border-outline text-primary hover:bg-surface-container-low">CLOSE TABLE</Button>
+                  {/* QR Code */}
+                  <div className="flex-1 flex justify-center items-center py-4 bg-surface-container-low rounded-lg mb-4 group-hover:bg-surface-container transition-colors" data-qr-table={table.name}>
+                    <div className="w-32 h-32 bg-white rounded flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
+                      <QRCodeSVG value={qrUrl} size={120} level="H" />
                     </div>
-                  ) : table.state === 'AVAILABLE' ? (
-                    <div className="grid grid-cols-2 gap-2">
+                  </div>
+
+                  {/* Status & Actions */}
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className={`${statusStyle.bg} ${statusStyle.text} px-3 py-1 rounded-full font-label-caps text-label-caps flex items-center`}>
+                        <span className={`w-2 h-2 ${statusStyle.dot} rounded-full mr-2 ${hasActiveOrder ? 'animate-pulse' : ''}`} />
+                        {statusStyle.label}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            downloadQRCode(table.name, table.qrCodeUrl);
+                          }}
+                          className="p-2 rounded-full bg-surface-container-low text-primary hover:bg-secondary-fixed hover:text-on-secondary-fixed-variant transition-all duration-300 hover:scale-110"
+                          title="Download QR Code"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            shareQRCode(table.name, table.qrCodeUrl);
+                          }}
+                          className="p-2 rounded-full bg-surface-container-low text-primary hover:bg-secondary-fixed hover:text-on-secondary-fixed-variant transition-all duration-300 hover:scale-110"
+                          title="Share Link"
+                        >
+                          <Share2 className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteClick(table);
+                          }}
+                          className="p-2 rounded-full bg-surface-container-low text-error hover:bg-error-container transition-all duration-300 hover:scale-110"
+                          title="Delete Table"
+                          disabled={hasActiveOrder}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {hasActiveOrder ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button size="sm" className="bg-primary text-on-primary hover:opacity-90">VIEW ORDER</Button>
+                        <Button size="sm" variant="outline" className="border border-outline text-primary hover:bg-surface-container-low">CLOSE TABLE</Button>
+                      </div>
+                    ) : table.status === 'EMPTY' ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="bg-surface-container-high text-primary hover:bg-surface-container"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(qrUrl, '_blank');
+                          }}
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          PREVIEW
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          className="bg-primary text-on-primary hover:opacity-90"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            downloadQRCode(table.name, table.qrCodeUrl);
+                          }}
+                        >
+                          <Download className="w-4 h-4 mr-1" />
+                          QR CODE
+                        </Button>
+                      </div>
+                    ) : (
                       <Button 
                         size="sm" 
-                        variant="outline" 
-                        className="bg-surface-container-high text-primary hover:bg-surface-container"
-                        onClick={() => window.open(qrUrl, '_blank')}
+                        className="w-full bg-secondary text-on-secondary hover:opacity-90"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleTableStatus(table.id);
+                        }}
                       >
-                        <Eye className="w-4 h-4 mr-1" />
-                        PREVIEW
+                        REOPEN TABLE
                       </Button>
-                      <Button 
-                        size="sm" 
-                        className="bg-primary text-on-primary hover:opacity-90"
-                        onClick={() => downloadQRCode(table.name, table.qrCodeUrl)}
-                      >
-                        <Download className="w-4 h-4 mr-1" />
-                        QR CODE
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button size="sm" className="w-full bg-secondary text-on-secondary hover:opacity-90">REOPEN TABLE</Button>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-          
-          {/* No Results */}
-          {filteredTables.length === 0 && searchQuery && (
-            <div className="col-span-full flex flex-col items-center justify-center py-16 text-center">
-              <div className="w-16 h-16 bg-surface-container-high rounded-full flex items-center justify-center mb-4">
-                <Search className="w-8 h-8 text-on-surface-variant" />
-              </div>
-              <h3 className="font-display text-title-sm text-primary mb-2">No tables found</h3>
-              <p className="text-on-surface-variant">Try adjusting your search criteria</p>
-              <Button 
-                variant="outline" 
-                className="mt-4 rounded-full"
-                onClick={() => setSearchQuery('')}
-              >
-                Clear Search
-              </Button>
+              );
+            })}
+          </div>
+        ) : (
+          /* Empty State */
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-16 h-16 bg-surface-container-high rounded-full flex items-center justify-center mb-4">
+              <Search className="w-8 h-8 text-on-surface-variant" />
             </div>
-          )}
-        </div>
+            {searchQuery ? (
+              <>
+                <h3 className="font-display text-title-sm text-primary mb-2">No tables found</h3>
+                <p className="text-on-surface-variant">Try adjusting your search criteria</p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4 rounded-full"
+                  onClick={() => setSearchQuery('')}
+                >
+                  Clear Search
+                </Button>
+              </>
+            ) : (
+              <>
+                <h3 className="font-display text-title-sm text-primary mb-2">No Tables Yet</h3>
+                <p className="text-on-surface-variant mb-4">Create your first table to generate QR codes for customers</p>
+                <Button 
+                  className="bg-primary text-on-primary"
+                  onClick={() => setShowNewTableForm(true)}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Your First Table
+                </Button>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Delete Confirmation Dialog */}

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { restaurantService } from '@/services/restaurantService';
 import { tableService } from '@/services/tableService';
 import { orderService } from '@/services/orderService';
+import { Watermark, WatermarkSpacer } from '@/components/Watermark';
 import type { Restaurant, Table, Order } from '@/types';
 
 export default function OrderSentPage({ params }: { params: Promise<{ slug: string; tableId: string }> }) {
@@ -57,7 +58,11 @@ export default function OrderSentPage({ params }: { params: Promise<{ slug: stri
     );
   }
 
+  // Check if watermark should be shown
+  const showWatermark = restaurant?.plan === 'free' || restaurant?.watermarkEnabled === true;
+
   return (
+    <WatermarkSpacer showWatermark={showWatermark}>
     <main className="min-h-screen bg-background flex flex-col items-center justify-center p-8 max-w-md mx-auto">
       {/* Success Indicator */}
       <div className="mb-10 flex flex-col items-center w-full">
@@ -131,5 +136,7 @@ export default function OrderSentPage({ params }: { params: Promise<{ slug: stri
         </Button>
       </div>
     </main>
+    <Watermark show={showWatermark} />
+    </WatermarkSpacer>
   );
 }

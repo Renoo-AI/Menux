@@ -24,7 +24,8 @@ import {
   Users,
   BarChart3,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DashboardLayout } from '@/components/layout';
@@ -32,6 +33,7 @@ import { TopAppBar } from '@/components/layout';
 import { useAuthStore } from '@/stores/authStore';
 import { useSoundNotification } from '@/hooks/use-sound-notification';
 import { useToast } from '@/hooks/use-toast';
+import { useStaffSession } from '@/contexts/StaffSessionContext';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,99 +44,29 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import type { Order, Table, OrderState } from '@/types';
-
-// Demo data for development/preview mode
-const demoOrders: Order[] = [
-  {
-    id: '1',
-    restaurantId: 'demo',
-    tableId: 't1',
-    tableName: 'Table 01',
-    items: [
-      { itemId: '1', name: 'Signature Latte', quantity: 2, unitPrice: 5.50, notes: 'Extra hot' },
-      { itemId: '2', name: 'Almond Croissant', quantity: 1, unitPrice: 4.50 },
-    ],
-    totalAmount: 15.50,
-    state: 'NEW',
-    createdAt: new Date(Date.now() - 2 * 60000),
-    updatedAt: new Date(),
-  },
-  {
-    id: '2',
-    restaurantId: 'demo',
-    tableId: 't2',
-    tableName: 'Table 03',
-    items: [
-      { itemId: '3', name: 'Cappuccino', quantity: 2, unitPrice: 4.50 },
-      { itemId: '4', name: 'Avocado Toast', quantity: 1, unitPrice: 12.00 },
-      { itemId: '5', name: 'Fresh Juice', quantity: 2, unitPrice: 6.00 },
-    ],
-    totalAmount: 33.00,
-    state: 'NEW',
-    createdAt: new Date(Date.now() - 5 * 60000),
-    updatedAt: new Date(),
-  },
-  {
-    id: '3',
-    restaurantId: 'demo',
-    tableId: 't3',
-    tableName: 'Table 12',
-    items: [
-      { itemId: '6', name: 'Truffle Tagliatelle', quantity: 1, unitPrice: 28.00, notes: 'Extra Parmesan' },
-      { itemId: '7', name: 'Burrata Salad', quantity: 1, unitPrice: 14.00 },
-    ],
-    totalAmount: 42.00,
-    state: 'ACCEPTED',
-    createdAt: new Date(Date.now() - 18 * 60000),
-    updatedAt: new Date(),
-  },
-  {
-    id: '4',
-    restaurantId: 'demo',
-    tableId: 't4',
-    tableName: 'Table 08',
-    items: [
-      { itemId: '8', name: 'Wagyu Burger', quantity: 2, unitPrice: 32.00 },
-      { itemId: '9', name: 'Wine Selection', quantity: 1, unitPrice: 48.00 },
-    ],
-    totalAmount: 112.00,
-    state: 'ACCEPTED',
-    createdAt: new Date(Date.now() - 35 * 60000),
-    updatedAt: new Date(),
-  },
-];
-
-const demoTables: Table[] = [
-  { id: 't1', restaurantId: 'demo', name: 'Table 01', label: 'Window Side', seats: 4, state: 'ACTIVE', qrCodeUrl: '/r/demo/t/T-01', createdAt: new Date(), updatedAt: new Date() },
-  { id: 't2', restaurantId: 'demo', name: 'Table 03', label: 'Main Hall', seats: 2, state: 'ACTIVE', qrCodeUrl: '/r/demo/t/T-03', createdAt: new Date(), updatedAt: new Date() },
-  { id: 't3', restaurantId: 'demo', name: 'Table 12', label: 'Patio', seats: 4, state: 'ACTIVE', qrCodeUrl: '/r/demo/t/T-12', createdAt: new Date(), updatedAt: new Date() },
-  { id: 't4', restaurantId: 'demo', name: 'Table 08', label: 'Corner', seats: 6, state: 'ACTIVE', qrCodeUrl: '/r/demo/t/T-08', createdAt: new Date(), updatedAt: new Date() },
-  { id: 't5', restaurantId: 'demo', name: 'Table 02', label: 'Window Side', seats: 2, state: 'AVAILABLE', qrCodeUrl: '/r/demo/t/T-02', createdAt: new Date(), updatedAt: new Date() },
-  { id: 't6', restaurantId: 'demo', name: 'Table 04', label: 'Main Hall', seats: 4, state: 'AVAILABLE', qrCodeUrl: '/r/demo/t/T-04', createdAt: new Date(), updatedAt: new Date() },
-  { id: 't7', restaurantId: 'demo', name: 'Table 05', label: 'Bar Area', seats: 2, state: 'AVAILABLE', qrCodeUrl: '/r/demo/t/T-05', createdAt: new Date(), updatedAt: new Date() },
-  { id: 't8', restaurantId: 'demo', name: 'B-01', label: 'Bar Stool', seats: 1, state: 'AVAILABLE', qrCodeUrl: '/r/demo/t/B-01', createdAt: new Date(), updatedAt: new Date() },
-];
-
-// Demo analytics data
-const demoAnalytics = {
-  todayRevenue: 1847.50,
-  yesterdayRevenue: 1423.00,
-  todayOrders: 47,
-  yesterdayOrders: 38,
-  avgOrderValue: 39.31,
-  peakHour: '14:00',
-  topItem: 'Signature Latte',
-  topItemSales: 23,
-};
+import type { Order, Table, OrderStatus } from '@/types';
+import { 
+  subscribeToActiveOrders, 
+  subscribeToTables, 
+  acceptOrder, 
+  closeOrder, 
+  cancelOrder,
+  markOrderPaid 
+} from '@/services/orderService';
+import { subscribeToTables as subscribeToTablesService } from '@/services/tableService';
 
 export default function CashierDashboard() {
   const router = useRouter();
-  const { user, isAuthenticated, isLoading, setUser, setLoading } = useAuthStore();
-  const [orders, setOrders] = useState<Order[]>(demoOrders);
-  const [tables, setTables] = useState<Table[]>(demoTables);
+  const { user, isAuthenticated } = useAuthStore();
+  const { session, isLoading: sessionLoading } = useStaffSession();
+  
+  // State for real data
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [tables, setTables] = useState<Table[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [loading, setLoadingState] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showNewOrderAlert, setShowNewOrderAlert] = useState(false);
@@ -145,6 +77,7 @@ export default function CashierDashboard() {
   // Cancel order dialog state
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
 
   // Update current time every minute
   useEffect(() => {
@@ -152,9 +85,37 @@ export default function CashierDashboard() {
     return () => clearInterval(timer);
   }, []);
 
+  // Subscribe to real-time orders and tables from Firebase
+  useEffect(() => {
+    const restaurantId = session?.restaurantId;
+    if (!restaurantId) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setLoadError(null);
+
+    // Subscribe to active orders
+    const unsubscribeOrders = subscribeToActiveOrders(restaurantId, (newOrders) => {
+      setOrders(newOrders);
+      setIsLoading(false);
+    });
+
+    // Subscribe to tables
+    const unsubscribeTables = subscribeToTablesService(restaurantId, (newTables) => {
+      setTables(newTables);
+    });
+
+    return () => {
+      unsubscribeOrders();
+      unsubscribeTables();
+    };
+  }, [session?.restaurantId]);
+
   // Sound notification for new orders
   useEffect(() => {
-    const currentNewOrdersCount = orders.filter(o => o.state === 'NEW').length;
+    const currentNewOrdersCount = orders.filter(o => o.status === 'CREATED').length;
     
     // Check if new orders increased
     if (currentNewOrdersCount > previousNewOrdersCount.current && previousNewOrdersCount.current >= 0) {
@@ -170,34 +131,25 @@ export default function CashierDashboard() {
     previousNewOrdersCount.current = currentNewOrdersCount;
   }, [orders, playSound]);
 
-  // Simulate real-time updates in demo mode
-  useEffect(() => {
-    const timer = setInterval(() => {
-      // Randomly update order times to simulate real-time
-      setOrders(prev => prev.map(order => ({
-        ...order,
-        createdAt: order.createdAt,
-      })));
-    }, 30000);
-    return () => clearInterval(timer);
-  }, []);
-
   const handleAcceptOrder = useCallback(async (orderId: string) => {
     setActionLoading(orderId + '-accept');
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const result = await acceptOrder(orderId);
       
-      const order = orders.find(o => o.id === orderId);
-      setOrders(prev => prev.map(o => 
-        o.id === orderId ? { ...o, state: 'ACCEPTED' as OrderState } : o
-      ));
-      
-      toast({
-        title: 'Order Accepted',
-        description: `Order from ${order?.tableName || 'Unknown'} has been accepted and is now being prepared.`,
-      });
+      if (result.success) {
+        const order = orders.find(o => o.id === orderId);
+        toast({
+          title: 'Order Accepted',
+          description: `Order from ${order?.tableName || 'Unknown'} has been accepted and is now being prepared.`,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: result.error || 'Failed to accept order. Please try again.',
+        });
+      }
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -213,17 +165,35 @@ export default function CashierDashboard() {
     setActionLoading(orderId + '-complete');
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // First mark as paid, then close
+      const paidResult = await markOrderPaid(orderId);
       
-      const order = orders.find(o => o.id === orderId);
-      setOrders(prev => prev.filter(o => o.id !== orderId));
-      setSelectedOrder(null);
+      if (!paidResult.success) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: paidResult.error || 'Failed to mark order as paid.',
+        });
+        setActionLoading(null);
+        return;
+      }
       
-      toast({
-        title: 'Order Completed',
-        description: `Order from ${order?.tableName || 'Unknown'} has been marked as paid and completed.`,
-      });
+      const closeResult = await closeOrder(orderId);
+      
+      if (closeResult.success) {
+        const order = orders.find(o => o.id === orderId);
+        setSelectedOrder(null);
+        toast({
+          title: 'Order Completed',
+          description: `Order from ${order?.tableName || 'Unknown'} has been marked as paid and completed.`,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: closeResult.error || 'Failed to close order. Please try again.',
+        });
+      }
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -235,8 +205,70 @@ export default function CashierDashboard() {
     }
   }, [orders, toast]);
 
+  const handleMarkPaid = useCallback(async (orderId: string) => {
+    setActionLoading(orderId + '-paid');
+    
+    try {
+      const result = await markOrderPaid(orderId);
+      
+      if (result.success) {
+        const order = orders.find(o => o.id === orderId);
+        toast({
+          title: 'Order Paid',
+          description: `Order from ${order?.tableName || 'Unknown'} has been marked as paid.`,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: result.error || 'Failed to mark order as paid.',
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to mark order as paid.',
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  }, [orders, toast]);
+
+  const handleCloseOrder = useCallback(async (orderId: string) => {
+    setActionLoading(orderId + '-close');
+    
+    try {
+      const result = await closeOrder(orderId);
+      
+      if (result.success) {
+        const order = orders.find(o => o.id === orderId);
+        setSelectedOrder(null);
+        toast({
+          title: 'Order Closed',
+          description: `Order from ${order?.tableName || 'Unknown'} has been closed.`,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: result.error || 'Failed to close order.',
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to close order.',
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  }, [orders, toast]);
+
   const handleCancelOrderClick = useCallback((order: Order) => {
     setOrderToCancel(order);
+    setCancelReason('');
     setShowCancelDialog(true);
   }, []);
 
@@ -247,16 +279,22 @@ export default function CashierDashboard() {
     setShowCancelDialog(false);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const reason = cancelReason.trim() || 'Cancelled by staff';
+      const result = await cancelOrder(orderToCancel.id, reason);
       
-      setOrders(prev => prev.filter(o => o.id !== orderToCancel.id));
-      setSelectedOrder(null);
-      
-      toast({
-        title: 'Order Cancelled',
-        description: `Order from ${orderToCancel.tableName} has been cancelled.`,
-      });
+      if (result.success) {
+        setSelectedOrder(null);
+        toast({
+          title: 'Order Cancelled',
+          description: `Order from ${orderToCancel.tableName} has been cancelled.`,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: result.error || 'Failed to cancel order. Please try again.',
+        });
+      }
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -267,15 +305,15 @@ export default function CashierDashboard() {
       setActionLoading(null);
       setOrderToCancel(null);
     }
-  }, [orderToCancel, toast]);
+  }, [orderToCancel, cancelReason, toast]);
 
-  const getStateColor = (state: OrderState) => {
-    switch (state) {
-      case 'NEW':
+  const getStateColor = (status: OrderStatus) => {
+    switch (status) {
+      case 'CREATED':
         return 'bg-secondary-fixed text-on-secondary-fixed-variant';
       case 'ACCEPTED':
         return 'bg-surface-container-high text-on-surface-variant';
-      case 'COMPLETED':
+      case 'PAID':
         return 'bg-primary-fixed text-on-primary-fixed-variant';
       case 'CANCELLED':
         return 'bg-error-container text-on-error-container';
@@ -284,18 +322,22 @@ export default function CashierDashboard() {
     }
   };
 
-  const getStateLabel = (state: OrderState) => {
-    switch (state) {
-      case 'NEW':
+  const getStateLabel = (status: OrderStatus) => {
+    switch (status) {
+      case 'CREATED':
         return 'NEW ORDER';
       case 'ACCEPTED':
         return 'ACCEPTED';
-      case 'COMPLETED':
+      case 'PAID':
         return 'PAID';
+      case 'CLOSED':
+        return 'CLOSED';
       case 'CANCELLED':
         return 'CANCELLED';
+      case 'REJECTED':
+        return 'REJECTED';
       default:
-        return state;
+        return status;
     }
   };
 
@@ -311,14 +353,91 @@ export default function CashierDashboard() {
     return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
   };
 
-  // Group orders by state for display
-  const newOrders = orders.filter(o => o.state === 'NEW');
-  const acceptedOrders = orders.filter(o => o.state === 'ACCEPTED');
-  const activeTableIds = orders.filter(o => ['NEW', 'ACCEPTED'].includes(o.state)).map(o => o.tableId);
+  // Group orders by status for display
+  const newOrders = orders.filter(o => o.status === 'CREATED');
+  const acceptedOrders = orders.filter(o => o.status === 'ACCEPTED');
+  const paidOrders = orders.filter(o => o.status === 'PAID');
+  const activeTableIds = orders.filter(o => ['CREATED', 'ACCEPTED', 'PAID'].includes(o.status)).map(o => o.tableId);
   
   // Calculate live stats
   const totalRevenue = orders.reduce((sum, o) => sum + o.totalAmount, 0);
   const avgOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
+
+  // Show loading state
+  if (sessionLoading || isLoading) {
+    return (
+      <DashboardLayout>
+        <TopAppBar
+          title="Active Tables"
+          subtitle="Loading..."
+          showSearch={false}
+          user={{
+            name: user?.staffProfile?.name || session?.staffName || 'User',
+            role: user?.role || session?.role || 'cashier',
+          }}
+        />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-secondary mx-auto mb-4" />
+            <p className="text-on-surface-variant">Loading dashboard...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Show error state
+  if (loadError) {
+    return (
+      <DashboardLayout>
+        <TopAppBar
+          title="Active Tables"
+          subtitle="Error"
+          showSearch={false}
+          user={{
+            name: user?.staffProfile?.name || session?.staffName || 'User',
+            role: user?.role || session?.role || 'cashier',
+          }}
+        />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <AlertTriangle className="w-12 h-12 text-error mx-auto mb-4" />
+            <p className="text-on-surface-variant mb-4">{loadError}</p>
+            <Button onClick={() => window.location.reload()}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Retry
+            </Button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Show no session state
+  if (!session?.restaurantId) {
+    return (
+      <DashboardLayout>
+        <TopAppBar
+          title="Active Tables"
+          subtitle="No Session"
+          showSearch={false}
+          user={{
+            name: user?.staffProfile?.name || 'User',
+            role: user?.role || 'cashier',
+          }}
+        />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <AlertCircle className="w-12 h-12 text-on-surface-variant mx-auto mb-4" />
+            <p className="text-on-surface-variant mb-4">No restaurant session found.</p>
+            <Button onClick={() => router.push('/login')}>
+              Go to Login
+            </Button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -327,8 +446,8 @@ export default function CashierDashboard() {
         subtitle={`${orders.length} busy`}
         showSearch={false}
         user={{
-          name: user?.staffProfile?.name || 'Demo Manager',
-          role: user?.role || 'manager',
+          name: user?.staffProfile?.name || session?.staffName || 'Demo Manager',
+          role: user?.role || session?.role || 'manager',
         }}
       />
       
@@ -393,7 +512,7 @@ export default function CashierDashboard() {
                   <span className="font-label-caps text-label-caps uppercase tracking-wider">AVAILABLE</span>
                 </div>
                 <p className="font-display text-4xl text-primary">
-                  {tables.filter(t => !activeTableIds.includes(t.id) && t.state !== 'OFFLINE').length}
+                  {tables.filter(t => !activeTableIds.includes(t.id) && t.status !== 'OFFLINE').length}
                 </p>
                 <p className="text-on-surface-variant text-xs mt-1">Ready to seat</p>
               </div>
@@ -413,45 +532,15 @@ export default function CashierDashboard() {
           </div>
 
           {/* Quick Stats Row */}
-          <div className="col-span-full grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div className="bg-gradient-to-br from-secondary/10 to-secondary/5 rounded-2xl p-5 border border-secondary/20 hover:border-secondary/40 transition-all duration-300">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-label-caps text-xs text-on-surface-variant uppercase tracking-wider">Today&apos;s Revenue</p>
-                  <p className="font-display text-2xl text-primary mt-1">${demoAnalytics.todayRevenue.toFixed(2)}</p>
+                  <p className="font-label-caps text-xs text-on-surface-variant uppercase tracking-wider">Active Revenue</p>
+                  <p className="font-display text-2xl text-primary mt-1">${totalRevenue.toFixed(2)}</p>
                 </div>
-                <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm ${
-                  demoAnalytics.todayRevenue >= demoAnalytics.yesterdayRevenue 
-                    ? 'bg-green-100 text-green-700' 
-                    : 'bg-red-100 text-red-700'
-                }`}>
-                  {demoAnalytics.todayRevenue >= demoAnalytics.yesterdayRevenue ? (
-                    <ArrowUpRight className="w-4 h-4" />
-                  ) : (
-                    <ArrowDownRight className="w-4 h-4" />
-                  )}
-                  {Math.abs(((demoAnalytics.todayRevenue - demoAnalytics.yesterdayRevenue) / demoAnalytics.yesterdayRevenue) * 100).toFixed(0)}%
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-gradient-to-br from-accent/10 to-accent/5 rounded-2xl p-5 border border-accent/20 hover:border-accent/40 transition-all duration-300">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-label-caps text-xs text-on-surface-variant uppercase tracking-wider">Orders Today</p>
-                  <p className="font-display text-2xl text-primary mt-1">{demoAnalytics.todayOrders}</p>
-                </div>
-                <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm ${
-                  demoAnalytics.todayOrders >= demoAnalytics.yesterdayOrders 
-                    ? 'bg-green-100 text-green-700' 
-                    : 'bg-red-100 text-red-700'
-                }`}>
-                  {demoAnalytics.todayOrders >= demoAnalytics.yesterdayOrders ? (
-                    <ArrowUpRight className="w-4 h-4" />
-                  ) : (
-                    <ArrowDownRight className="w-4 h-4" />
-                  )}
-                  {Math.abs(((demoAnalytics.todayOrders - demoAnalytics.yesterdayOrders) / demoAnalytics.yesterdayOrders) * 100).toFixed(0)}%
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-8 h-8 text-secondary" />
                 </div>
               </div>
             </div>
@@ -467,10 +556,24 @@ export default function CashierDashboard() {
                 </div>
               </div>
               <p className="text-xs text-on-surface-variant mt-2">
-                Top: {demoAnalytics.topItem} ({demoAnalytics.topItemSales} sold)
+                {orders.length} active orders • {tables.length} tables
               </p>
             </div>
           </div>
+
+          {/* Empty State for Orders */}
+          {orders.length === 0 && (
+            <div className="col-span-full bg-white rounded-2xl p-12 shadow-card text-center">
+              <Utensils className="w-16 h-16 text-on-surface-variant mx-auto mb-4 opacity-50" />
+              <h3 className="font-display text-title-md text-primary mb-2">No Active Orders</h3>
+              <p className="text-on-surface-variant mb-4">
+                Orders will appear here in real-time as customers place them.
+              </p>
+              <p className="text-sm text-on-surface-variant opacity-70">
+                Restaurant: {session?.restaurantName || 'Unknown'}
+              </p>
+            </div>
+          )}
 
           {/* New Orders (Pulsing) */}
           {newOrders.map((order) => (
@@ -487,8 +590,8 @@ export default function CashierDashboard() {
                     {order.items.length} ITEMS
                   </p>
                 </div>
-                <span className={`px-3 py-1 rounded-full font-label-caps text-label-caps animate-pulse-subtle ${getStateColor(order.state)}`}>
-                  {getStateLabel(order.state)}
+                <span className={`px-3 py-1 rounded-full font-label-caps text-label-caps animate-pulse-subtle ${getStateColor(order.status)}`}>
+                  {getStateLabel(order.status)}
                 </span>
               </div>
               <div className="flex items-center gap-2 mb-4">
@@ -518,8 +621,8 @@ export default function CashierDashboard() {
                     {order.items.length} ITEMS
                   </p>
                 </div>
-                <span className={`px-3 py-1 rounded-full font-label-caps text-label-caps ${getStateColor(order.state)}`}>
-                  {getStateLabel(order.state)}
+                <span className={`px-3 py-1 rounded-full font-label-caps text-label-caps ${getStateColor(order.status)}`}>
+                  {getStateLabel(order.status)}
                 </span>
               </div>
               <div className="flex items-center gap-2 mb-4">
@@ -533,10 +636,41 @@ export default function CashierDashboard() {
               </div>
             </div>
           ))}
+
+          {/* Paid Orders (Awaiting Close) */}
+          {paidOrders.map((order) => (
+            <div
+              key={order.id}
+              onClick={() => setSelectedOrder(order)}
+              className="bg-white border border-green-200 rounded-3xl p-6 shadow-card active:scale-95 transition-all duration-300 cursor-pointer ring-2 ring-green-500 hover:shadow-xl hover:-translate-y-1 group relative overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-2 h-full bg-green-500" />
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="font-display text-title-sm text-primary group-hover:text-green-600 transition-colors">{order.tableName}</h3>
+                  <p className="text-on-surface-variant font-label-caps text-label-caps">
+                    {order.items.length} ITEMS
+                  </p>
+                </div>
+                <span className={`px-3 py-1 rounded-full font-label-caps text-label-caps ${getStateColor(order.status)}`}>
+                  {getStateLabel(order.status)}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 mb-4">
+                <CheckCircle className="w-4 h-4 text-green-500" />
+                <span className="text-on-surface-variant font-medium text-sm">
+                  {formatTimeAgo(order.createdAt)}
+                </span>
+              </div>
+              <div className="border-t border-surface-container pt-4">
+                <p className="text-primary font-bold text-lg">${order.totalAmount.toFixed(2)}</p>
+              </div>
+            </div>
+          ))}
           
           {/* Available Tables */}
           {tables
-            .filter(t => !activeTableIds.includes(t.id) && t.state !== 'OFFLINE')
+            .filter(t => !activeTableIds.includes(t.id) && t.status !== 'OFFLINE')
             .map((table) => (
               <div
                 key={table.id}
@@ -566,7 +700,8 @@ export default function CashierDashboard() {
           <aside className="w-[400px] bg-white border-l border-outline-variant flex flex-col h-full shadow-2xl z-40">
             <div className="p-6 border-b border-surface-container relative">
               <div className={`absolute top-0 left-0 w-full h-1 ${
-                selectedOrder.state === 'NEW' ? 'bg-secondary' : 'bg-primary'
+                selectedOrder.status === 'CREATED' ? 'bg-secondary' : 
+                selectedOrder.status === 'PAID' ? 'bg-green-500' : 'bg-primary'
               }`} />
               <div className="flex justify-between items-center mb-2">
                 <h2 className="font-display text-title-sm text-primary">{selectedOrder.tableName} Details</h2>
@@ -612,7 +747,7 @@ export default function CashierDashboard() {
 
             {/* Action Area */}
             <div className="p-6 bg-surface-container-lowest grid grid-cols-2 gap-4 border-t border-outline-variant">
-              {selectedOrder.state === 'NEW' && (
+              {selectedOrder.status === 'CREATED' && (
                 <>
                   <Button
                     onClick={() => handleAcceptOrder(selectedOrder.id)}
@@ -652,7 +787,7 @@ export default function CashierDashboard() {
                 </>
               )}
               
-              {selectedOrder.state === 'ACCEPTED' && (
+              {selectedOrder.status === 'ACCEPTED' && (
                 <>
                   <Button
                     onClick={() => handleCompleteOrder(selectedOrder.id)}
@@ -667,22 +802,15 @@ export default function CashierDashboard() {
                     ) : (
                       <>
                         <CreditCard className="w-5 h-5 mr-2" />
-                        Mark as Paid
+                        Mark as Paid & Complete
                       </>
                     )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="py-4 bg-surface-container-high text-primary rounded-full hover:opacity-90"
-                  >
-                    <Sparkles className="w-5 h-5 mr-2" />
-                    Close Table
                   </Button>
                   <Button
                     onClick={() => handleCancelOrderClick(selectedOrder)}
                     disabled={actionLoading === selectedOrder.id + '-cancel'}
                     variant="outline"
-                    className="py-4 border border-error text-error rounded-full hover:bg-error-container/20"
+                    className="col-span-2 py-4 border border-error text-error rounded-full hover:bg-error-container/20"
                   >
                     {actionLoading === selectedOrder.id + '-cancel' ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
@@ -690,6 +818,28 @@ export default function CashierDashboard() {
                       <>
                         <XCircle className="w-5 h-5 mr-2" />
                         Cancel
+                      </>
+                    )}
+                  </Button>
+                </>
+              )}
+
+              {selectedOrder.status === 'PAID' && (
+                <>
+                  <Button
+                    onClick={() => handleCloseOrder(selectedOrder.id)}
+                    disabled={actionLoading === selectedOrder.id + '-close'}
+                    className="col-span-2 bg-green-600 text-white rounded-full py-4 hover:opacity-90 shadow-md hover:shadow-lg transition-all duration-300"
+                  >
+                    {actionLoading === selectedOrder.id + '-close' ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Closing...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-5 h-5 mr-2" />
+                        Close Order
                       </>
                     )}
                   </Button>
@@ -714,7 +864,7 @@ export default function CashierDashboard() {
             </div>
             <AlertDialogDescription className="text-on-surface-variant">
               Are you sure you want to cancel the order from <strong className="text-primary">{orderToCancel?.tableName}</strong>? 
-              This action cannot be undone and the customer will be notified.
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2 sm:gap-0">

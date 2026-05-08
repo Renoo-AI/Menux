@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/components/theme-provider";
 import { StaffSessionProvider } from "@/contexts/StaffSessionContext";
+import SuperadminShortcut from "@/components/SuperadminShortcut";
 
 // Menux Brand Fonts
 const playfairDisplay = Playfair_Display({
@@ -70,6 +71,7 @@ export default function RootLayout({
               {children}
             </ErrorBoundary>
             <Toaster />
+            <SuperadminShortcut />
           </StaffSessionProvider>
         </ThemeProvider>
       </body>

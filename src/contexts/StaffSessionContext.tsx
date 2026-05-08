@@ -20,37 +20,6 @@ const StaffSessionContext = createContext<StaffSessionContextType | undefined>(u
 
 const STORAGE_KEY = 'menux_staff_session';
 
-// Demo staff data for testing without Firebase
-const DEMO_STAFF: Record<string, { restaurantId: string; restaurantSlug: string; restaurantName: string; staffId: string; staffName: string; role: StaffRole; pin: string }> = {
-  'zcoffee-1234': {
-    restaurantId: 'demo-restaurant-zcoffee',
-    restaurantSlug: 'zcoffee',
-    restaurantName: 'Z Coffee',
-    staffId: 'demo-staff-001',
-    staffName: 'Cashier Demo',
-    role: 'cashier',
-    pin: '1234',
-  },
-  'zcoffee-5678': {
-    restaurantId: 'demo-restaurant-zcoffee',
-    restaurantSlug: 'zcoffee',
-    restaurantName: 'Z Coffee',
-    staffId: 'demo-staff-002',
-    staffName: 'Owner Demo',
-    role: 'owner',
-    pin: '5678',
-  },
-  'superadmin-9999': {
-    restaurantId: 'all',
-    restaurantSlug: 'admin',
-    restaurantName: 'MenuxPro Admin',
-    staffId: SUPERADMIN_UID,
-    staffName: 'Super Admin',
-    role: 'admin',
-    pin: '9999',
-  },
-};
-
 export function StaffSessionProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<StaffSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -78,35 +47,43 @@ export function StaffSessionProvider({ children }: { children: React.ReactNode }
     setIsLoading(true);
     
     try {
-      // For MVP, use demo authentication
-      // In production, this would call a Firebase Cloud Function
-      const key = `${restaurantSlug.toLowerCase()}-${pin}`;
-      const demoStaff = DEMO_STAFF[key];
+      // Call the server-side API for PIN verification
+      const response = await fetch('/api/staff/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          restaurantSlug: restaurantSlug.toLowerCase(),
+          pin,
+        }),
+      });
       
-      if (demoStaff) {
-        const isSuper = demoStaff.staffId === SUPERADMIN_UID;
-        const newSession: StaffSession & { isSuperadmin?: boolean } = {
-          restaurantId: demoStaff.restaurantId,
-          restaurantSlug: demoStaff.restaurantSlug,
-          restaurantName: demoStaff.restaurantName,
-          staffId: demoStaff.staffId,
-          staffName: demoStaff.staffName,
-          role: demoStaff.role,
-          isSuperadmin: isSuper,
+      const data = await response.json();
+      
+      if (response.ok && data.success && data.session) {
+        const newSession: StaffSession = {
+          restaurantId: data.session.restaurantId,
+          restaurantSlug: data.session.restaurantSlug,
+          restaurantName: data.session.restaurantName,
+          staffId: data.session.staffId,
+          staffName: data.session.staffName,
+          role: data.session.role,
         };
         
         setSession(newSession);
-        setIsSuperadmin(isSuper);
+        setIsSuperadmin(false);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(newSession));
         
         return { success: true };
       }
       
-      // Invalid credentials
-      return { success: false, error: 'Invalid restaurant code or PIN' };
+      // Handle API error response
+      const errorMessage = data.error || 'Invalid restaurant code or PIN';
+      return { success: false, error: errorMessage };
     } catch (error) {
       console.error('Login error:', error);
-      return { success: false, error: 'Login failed. Please try again.' };
+      return { success: false, error: 'Login failed. Please check your connection and try again.' };
     } finally {
       setIsLoading(false);
     }

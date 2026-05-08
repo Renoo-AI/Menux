@@ -9,11 +9,16 @@ import {
   CheckCircle, 
   XCircle,
   Star,
-  ArrowRight
+  ArrowRight,
+  MessageCircle,
+  Mail,
+  Phone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function LandingPage() {
+  const currentYear = new Date().getFullYear();
+  
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* TopNavBar */}
@@ -45,7 +50,7 @@ export default function LandingPage() {
             </p>
             <div className="flex flex-wrap gap-4">
               <Button asChild size="lg" className="bg-primary text-on-primary luxury-shadow hover:opacity-90">
-                <Link href="/login">Découvrir Menux</Link>
+                <Link href="/login?signup=true">Get Started Free</Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="border-outline hover:bg-surface-container-low">
                 <Link href="/r/demo">Voir une démo</Link>
@@ -322,7 +327,7 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Button asChild size="lg" className="bg-primary text-on-primary rounded-full hover:opacity-90">
-              <Link href="/login">Commencer</Link>
+              <Link href="/login?signup=true">Get Started Free</Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="border-outline rounded-full">
               <Link href="/r/demo">Voir une démo</Link>
@@ -331,12 +336,54 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Contact Section */}
+      <section className="py-24 px-8 md:px-16 max-w-7xl mx-auto bg-surface-container-low">
+        <div className="text-center mb-12">
+          <h2 className="font-display text-headline-md text-primary mb-4">
+            Contactez-nous
+          </h2>
+          <p className="font-body-md text-on-surface-variant">
+            Notre équipe est disponible pour répondre à toutes vos questions.
+          </p>
+        </div>
+        
+        <div className="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
+          {/* WhatsApp Contact */}
+          <a 
+            href="https://wa.me/21656110674" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="group bg-white p-8 rounded-lg border border-surface-container-high luxury-shadow flex flex-col items-center gap-4 hover:-translate-y-1 transition-transform duration-300"
+          >
+            <div className="w-14 h-14 bg-green-500 rounded-full flex items-center justify-center text-white">
+              <MessageCircle className="w-7 h-7" />
+            </div>
+            <h3 className="font-display text-title-sm text-primary">WhatsApp</h3>
+            <p className="text-on-surface-variant text-center">+216 56110674</p>
+            <span className="text-secondary font-semibold group-hover:underline">Envoyer un message →</span>
+          </a>
+          
+          {/* Email Contact */}
+          <a 
+            href="mailto:contact@menuxpro.com" 
+            className="group bg-white p-8 rounded-lg border border-surface-container-high luxury-shadow flex flex-col items-center gap-4 hover:-translate-y-1 transition-transform duration-300"
+          >
+            <div className="w-14 h-14 bg-primary rounded-full flex items-center justify-center text-on-primary">
+              <Mail className="w-7 h-7" />
+            </div>
+            <h3 className="font-display text-title-sm text-primary">Email</h3>
+            <p className="text-on-surface-variant text-center">contact@menuxpro.com</p>
+            <span className="text-secondary font-semibold group-hover:underline">Envoyer un email →</span>
+          </a>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="mt-auto w-full px-8 md:px-16 py-16 flex flex-col md:flex-row justify-between items-start gap-8 max-w-7xl mx-auto bg-surface-container rounded-t-lg">
         <div className="flex flex-col gap-6 max-w-xs">
           <span className="font-display text-title-sm font-bold text-primary">Menux</span>
           <p className="font-body-md text-on-surface-variant">
-            © 2024 Menux. L&apos;excellence opérationnelle pour la restauration.
+            © {currentYear} Menux. L&apos;excellence opérationnelle pour la restauration.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-16">
@@ -363,6 +410,17 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* Floating WhatsApp Button */}
+      <a
+        href="https://wa.me/21656110674"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-green-500 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-green-600 hover:scale-110 transition-all duration-300"
+        aria-label="Contact us on WhatsApp"
+      >
+        <MessageCircle className="w-7 h-7" />
+      </a>
     </div>
   );
 }

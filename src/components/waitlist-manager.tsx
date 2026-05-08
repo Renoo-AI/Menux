@@ -46,7 +46,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/alert-dialog';
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 
 export type WaitlistStatus = 'waiting' | 'notified' | 'seated' | 'cancelled' | 'no_show';

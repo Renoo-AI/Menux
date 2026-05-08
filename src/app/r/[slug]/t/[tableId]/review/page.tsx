@@ -10,6 +10,7 @@ import { restaurantService } from '@/services/restaurantService';
 import { tableService } from '@/services/tableService';
 import { orderService } from '@/services/orderService';
 import { useCartStore } from '@/stores/cartStore';
+import { Watermark, WatermarkSpacer } from '@/components/Watermark';
 import type { Restaurant, Table } from '@/types';
 
 export default function OrderReviewPage({ params }: { params: Promise<{ slug: string; tableId: string }> }) {
@@ -123,7 +124,11 @@ export default function OrderReviewPage({ params }: { params: Promise<{ slug: st
     );
   }
 
+  // Check if watermark should be shown
+  const showWatermark = restaurant?.plan === 'free' || restaurant?.watermarkEnabled === true;
+
   return (
+    <WatermarkSpacer showWatermark={showWatermark}>
     <div className="min-h-screen bg-background font-body">
       {/* Header */}
       <header className="flex justify-between items-center px-6 py-4 sticky top-0 bg-surface shadow-card z-40">
@@ -257,5 +262,7 @@ export default function OrderReviewPage({ params }: { params: Promise<{ slug: st
         </div>
       )}
     </div>
+    <Watermark show={showWatermark} />
+    </WatermarkSpacer>
   );
 }

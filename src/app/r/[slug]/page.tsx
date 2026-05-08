@@ -10,6 +10,7 @@ import { restaurantService } from '@/services/restaurantService';
 import { menuService } from '@/services/menuService';
 import { useCartStore } from '@/stores/cartStore';
 import { MenuSkeleton } from '@/components/ui/menu-skeleton';
+import { Watermark, WatermarkSpacer } from '@/components/Watermark';
 import type { Restaurant, MenuItem, MenuCategory } from '@/types';
 
 // Demo data for when Firebase is not connected
@@ -21,6 +22,12 @@ const DEMO_RESTAURANT: Restaurant = {
   address: '123 Rue de la Paix, Paris',
   phone: '+33 1 23 45 67 89',
   email: 'hello@cafe-elegance.fr',
+  status: 'ACTIVE',
+  currency: 'EUR',
+  plan: 'free',
+  slugType: 'free-random',
+  watermarkEnabled: false,
+  maxMenuItems: 50,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -245,7 +252,11 @@ export default function PublicMenuPage({ params }: { params: Promise<{ slug: str
     );
   }
 
+  // Check if watermark should be shown
+  const showWatermark = restaurant?.plan === 'free' || restaurant?.watermarkEnabled === true;
+
   return (
+    <WatermarkSpacer showWatermark={showWatermark}>
     <div className="min-h-screen bg-background font-body pb-24">
       {/* Demo Mode Banner */}
       {isDemoMode && (
@@ -383,5 +394,7 @@ export default function PublicMenuPage({ params }: { params: Promise<{ slug: str
         </div>
       )}
     </div>
+    <Watermark show={showWatermark} />
+    </WatermarkSpacer>
   );
 }

@@ -51,7 +51,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/alert-dialog';
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 
 export type PromotionType = 'percentage' | 'fixed' | 'bogo' | 'free_item';

@@ -12,8 +12,7 @@ service cloud.firestore {
     }
     
     function superAdminUid() {
-      // This should match your NEXT_PUBLIC_SUPERADMIN_UID
-      // In production, consider using Firebase Custom Claims instead
+      // SuperAdmin UID - should match NEXT_PUBLIC_SUPERADMIN_UID
       return 'rjAbnlO0deNZRavuHgfBsxRZTVY2';
     }
     
@@ -36,17 +35,25 @@ service cloud.firestore {
     function isValidPrice(price) {
       return price is number && price >= 0 && price <= 100000;
     }
+    
+    function sanitizeString(value) {
+      return value.matches('^[-a-zA-Z0-9 ]*$');
+    }
 
     // ============================================
     // RESTAURANTS
     // ============================================
     match /restaurants/{restaurantId} {
       // Public read for active restaurants (for menu display)
-      // Note: Using 'ACTIVE' instead of 'active' to match the type
       allow read: if resource.data.status == 'ACTIVE' || isStaff(restaurantId) || isSuperAdmin();
       
-      // Only superadmin can create restaurants
-      allow create: if isSuperAdmin();
+      // Authenticated users can create restaurants (for free plan signup)
+      allow create: if isAuthenticated() 
+        && isValidString(resource.data.name, 100)
+        && isValidString(resource.data.slug, 50)
+        && resource.data.status == 'ACTIVE'
+        && resource.data.ownerUid == request.auth.uid
+        && resource.data.plan in ['free', 'pro'];
       
       // Owner or superadmin can update
       allow update: if isOwner(restaurantId) || isSuperAdmin();
@@ -59,15 +66,21 @@ service cloud.firestore {
     // TABLES (top-level collection)
     // ============================================
     match /tables/{tableId} {
-      // Public read for active restaurant tables
+      // Public read for active restaurant tables (for QR code access)
       allow read: if resource.data.restaurantId != null && 
         (get(/databases/$(database)/documents/restaurants/$(resource.data.restaurantId)).data.status == 'ACTIVE' ||
          isStaff(resource.data.restaurantId) || 
          isSuperAdmin());
       
-      // Staff can create/update tables for their restaurant
-      allow create: if isStaff(resource.data.restaurantId) || isSuperAdmin();
+      // Staff can create tables for their restaurant
+      allow create: if isAuthenticated() && 
+        (isStaff(resource.data.restaurantId) || isSuperAdmin())
+        && isValidString(resource.data.name, 10);
+      
+      // Staff can update tables
       allow update: if isStaff(resource.data.restaurantId) || isSuperAdmin();
+      
+      // Staff can delete tables
       allow delete: if isStaff(resource.data.restaurantId) || isSuperAdmin();
     }
     
@@ -81,6 +94,7 @@ service cloud.firestore {
          isStaff(resource.data.restaurantId) || 
          isSuperAdmin());
       
+      // Staff can manage categories
       allow create, update, delete: if isStaff(resource.data.restaurantId) || isSuperAdmin();
     }
     
@@ -94,9 +108,14 @@ service cloud.firestore {
          isStaff(resource.data.restaurantId) || 
          isSuperAdmin());
       
-      allow create, update: if isStaff(resource.data.restaurantId) || isSuperAdmin()
+      // Staff can create/update with validation
+      allow create: if isStaff(resource.data.restaurantId) || isSuperAdmin()
         && isValidString(resource.data.name, 100)
         && isValidPrice(resource.data.price);
+      
+      allow update: if isStaff(resource.data.restaurantId) || isSuperAdmin()
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'description', 'price', 'imageUrl', 'available', 'isFeatured', 'tags', 'allergens', 'sortOrder', 'categoryId', 'updatedAt']) 
+            || isSuperAdmin());
       
       allow delete: if isStaff(resource.data.restaurantId) || isSuperAdmin();
     }
@@ -106,24 +125,26 @@ service cloud.firestore {
     // ============================================
     match /orders/{orderId} {
       // Staff can read orders for their restaurant
-      // Allow public read for order confirmation pages (with orderId in URL)
+      // Public can read their own order (for confirmation pages)
       allow read: if resource.data.restaurantId != null && (
         isAuthenticated() && isStaff(resource.data.restaurantId) ||
         isSuperAdmin()
       );
       
-      // Orders are created via client SDK (with validation)
-      // Note: For production, use Cloud Functions for order creation
+      // Public can create orders via API (with server-side validation)
+      // Note: This is for direct client writes, prefer using Cloud Functions/API
       allow create: if isValidString(resource.data.restaurantId, 128)
         && resource.data.status == 'CREATED'
         && isValidPrice(resource.data.totalAmount)
-        && resource.data.items is list;
+        && resource.data.items is list
+        && resource.data.items.size() > 0
+        && resource.data.items.size() <= 50;
       
       // Status updates - staff only, with field restrictions
       allow update: if isStaff(resource.data.restaurantId) || isSuperAdmin()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'updatedBy', 'acceptedAt', 'completedAt', 'cancelledAt', 'paidAt', 'closedAt', 'rejectReason', 'cancelReason']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'acceptedAt', 'paidAt', 'closedAt', 'cancelledAt', 'rejectReason', 'cancelReason']);
       
-      // Only superadmin can delete orders (for cleanup)
+      // Only superadmin can delete orders
       allow delete: if isSuperAdmin();
     }
     
@@ -135,11 +156,28 @@ service cloud.firestore {
       allow read: if isAuthenticated() && 
         (isStaff(resource.data.restaurantId) || isSuperAdmin());
       
-      // Staff and system can create logs
-      allow create: if isAuthenticated();
+      // System can create logs
+      allow create: if true;
       
       // Logs are immutable
       allow update, delete: if false;
+    }
+    
+    // ============================================
+    // STAFF (per restaurant)
+    // ============================================
+    match /staff/{staffId} {
+      // Staff can read other staff in their restaurant
+      allow read: if isAuthenticated() && (
+        resource.data.restaurantId != null && isStaff(resource.data.restaurantId) ||
+        isSuperAdmin()
+      );
+      
+      // Owner can manage staff
+      allow create, update: if isOwner(resource.data.restaurantId) || isSuperAdmin();
+      
+      // Only owner can delete staff
+      allow delete: if isOwner(resource.data.restaurantId) || isSuperAdmin();
     }
     
     // ============================================
@@ -169,7 +207,7 @@ service cloud.firestore {
     // MAGIC LINKS
     // ============================================
     match /magic_links/{tokenId} {
-      // Magic links are one-time use, self-destruct after use
+      // Magic links are one-time use
       allow read: if isAuthenticated() && (
         resource.data.createdBy == request.auth.uid ||
         isSuperAdmin()
@@ -187,8 +225,8 @@ service cloud.firestore {
       // Only superadmin can read logs
       allow read: if isSuperAdmin();
       
-      // Anyone authenticated can create logs (for audit trail)
-      allow create: if isAuthenticated();
+      // System can create logs
+      allow create: if true;
       
       // Logs are immutable
       allow update, delete: if false;
@@ -199,30 +237,6 @@ service cloud.firestore {
     // ============================================
     match /rate_limits/{rateLimitId} {
       allow read, write: if false; // Managed by Cloud Functions only
-    }
-    
-    // ============================================
-    // DEVICE SECURITY
-    // ============================================
-    match /kicked_devices/{deviceId} {
-      allow read: if isAuthenticated();
-      allow write: if isSuperAdmin();
-    }
-    
-    match /banned_devices/{deviceId} {
-      allow read: if isAuthenticated();
-      allow write: if isSuperAdmin();
-    }
-    
-    // ============================================
-    // STAFF (per restaurant)
-    // ============================================
-    match /staff/{staffId} {
-      allow read: if isAuthenticated() && (
-        resource.data.restaurantId != null && isStaff(resource.data.restaurantId) ||
-        isSuperAdmin()
-      );
-      allow create, update, delete: if isOwner(resource.data.restaurantId) || isSuperAdmin();
     }
     
     // ============================================

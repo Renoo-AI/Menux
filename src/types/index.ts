@@ -13,6 +13,10 @@ export type RestaurantStatus = 'ACTIVE' | 'OFFLINE';
 
 export type Currency = 'TND' | 'QAR' | 'EUR' | 'USD';
 
+export type PlanType = 'free' | 'pro';
+
+export type SlugType = 'free-random' | 'custom';
+
 // ============ Core Models ============
 
 export interface Restaurant {
@@ -26,12 +30,21 @@ export interface Restaurant {
   logoUrl?: string;
   phone?: string;
   email?: string;
+  ownerUid?: string;
+  // Plan fields
+  plan: PlanType;
+  slugType: SlugType;
+  watermarkEnabled: boolean;
+  maxMenuItems: number;
+  // Branding (pro only)
   branding?: {
     logoUrl?: string;
     primaryColor?: string;
     accentColor?: string;
   };
   openingHours?: OpeningHours;
+  // Staff management
+  staffUids?: Record<string, string>; // uid -> role mapping
   createdAt: Date;
   updatedAt: Date;
 }
