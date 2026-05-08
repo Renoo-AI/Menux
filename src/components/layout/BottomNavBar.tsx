@@ -12,7 +12,9 @@ import {
   BookOpen,
   Receipt,
   History,
-  ChefHat
+  ChefHat,
+  Star,
+  Users
 } from 'lucide-react';
 
 interface NavItem {
@@ -31,8 +33,8 @@ const publicNavItems: NavItem[] = [
 const dashboardNavItems: NavItem[] = [
   { href: '/dashboard', label: 'Home', icon: <Home className="w-6 h-6" /> },
   { href: '/dashboard/kitchen', label: 'Kitchen', icon: <ChefHat className="w-6 h-6" /> },
-  { href: '/dashboard/history', label: 'History', icon: <History className="w-6 h-6" /> },
-  { href: '/dashboard/settings', label: 'Profile', icon: <User className="w-6 h-6" /> },
+  { href: '/dashboard/staff', label: 'Staff', icon: <Users className="w-6 h-6" /> },
+  { href: '/dashboard/feedback', label: 'Reviews', icon: <Star className="w-6 h-6" /> },
 ];
 
 interface BottomNavBarProps {
