@@ -39,7 +39,6 @@ import type { Order, Table } from '@/types';
 import { cashierService } from '@/services/cashierService';
 import { orderService } from '@/services/orderService';
 import { tableService } from '@/services/tableService';
-import { restaurantService } from '@/services/restaurantService';
 
 export default function StaffDashboardPage() {
   const router = useRouter();
@@ -52,8 +51,7 @@ export default function StaffDashboardPage() {
   const [showReasonDialog, setShowReasonDialog] = useState(false);
   const [reasonAction, setReasonAction] = useState<{ action: string; table: Table } | null>(null);
   const [reason, setReason] = useState('');
-  const [isDemoMode, setIsDemoMode] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'demo' | 'offline'>('connected');
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'offline'>('connected');
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -73,9 +71,10 @@ export default function StaffDashboardPage() {
       session.restaurantId,
       (tablesData) => {
         setTables(tablesData);
-        // Check if using demo data
-        setIsDemoMode(restaurantService.isDemoRestaurant(session.restaurantId));
-        setConnectionStatus(tablesData.length > 0 && !restaurantService.isDemoRestaurant(session.restaurantId) ? 'connected' : 'demo');
+        setConnectionStatus('connected');
+      },
+      () => {
+        setConnectionStatus('offline');
       }
     );
     
@@ -226,11 +225,6 @@ export default function StaffDashboardPage() {
                   <Badge className="bg-green-50 text-green-700 border-green-200 flex items-center gap-1">
                     <Wifi className="w-3 h-3" />
                     Live
-                  </Badge>
-                ) : connectionStatus === 'demo' ? (
-                  <Badge className="bg-amber-50 text-amber-700 border-amber-200 flex items-center gap-1">
-                    <WifiOff className="w-3 h-3" />
-                    Demo
                   </Badge>
                 ) : (
                   <Badge className="bg-red-50 text-red-700 border-red-200 flex items-center gap-1">

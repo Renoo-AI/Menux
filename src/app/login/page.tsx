@@ -1,22 +1,41 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Loader2, Eye, EyeOff, Coffee, UtensilsCrossed, Clock, Users, ArrowRight, Check } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { 
+  Loader2, Eye, EyeOff, Coffee, UtensilsCrossed, Clock, Users, 
+  ArrowRight, Chrome, UserPlus, Building2
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { authService } from '@/services/authService';
 import { useAuthStore } from '@/stores/authStore';
+import { 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword
+} from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { toast } = useToast();
+  const isSignup = searchParams.get('signup') === 'true';
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [mode, setMode] = useState<'login' | 'signup'>(isSignup ? 'signup' : 'login');
   
   const { setUser, isAuthenticated } = useAuthStore();
 
@@ -35,43 +54,154 @@ export default function LoginPage() {
     return () => unsubscribe();
   }, [setUser]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Generate random slug for free plan
+  const generateFreeSlug = () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 6; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return `free-${result}`;
+  };
+
+  // Handle Google Sign In / Sign Up
+  const handleGoogleAuth = async () => {
+    setGoogleLoading(true);
+    setError(null);
+
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // Check if user document exists
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      
+      if (!userDoc.exists()) {
+        // New user - create restaurant and user profile
+        const restaurantId = doc(db, 'restaurants').id;
+        const slug = generateFreeSlug();
+        
+        // Create restaurant
+        await setDoc(doc(db, 'restaurants', restaurantId), {
+          name: `${user.displayName || 'My Restaurant'} Menu`,
+          slug,
+          ownerId: user.uid,
+          plan: 'free',
+          status: 'active',
+          currency: 'TND',
+          language: 'fr',
+          watermarkEnabled: true,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+
+        // Create user profile
+        await setDoc(doc(db, 'users', user.uid), {
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          restaurantId,
+          role: 'owner',
+          createdAt: serverTimestamp(),
+        });
+
+        toast({
+          title: 'Welcome to MenuxPro!',
+          description: 'Your free restaurant menu has been created.',
+        });
+      }
+
+      router.push('/dashboard');
+    } catch (err: unknown) {
+      const firebaseError = err as { code?: string };
+      if (firebaseError.code === 'auth/popup-closed-by-user') {
+        setError('Sign in cancelled. Please try again.');
+      } else {
+        setError('Failed to sign in with Google. Please try again.');
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  // Handle Email Sign Up
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
-      const user = await authService.signIn(email, password);
-      
-      if (user) {
-        setUser(user);
-        router.push('/dashboard');
+      const result = await createUserWithEmailAndPassword(auth, email, password);
+      const user = result.user;
+
+      // Create restaurant
+      const restaurantId = doc(db, 'restaurants').id;
+      const slug = generateFreeSlug();
+
+      await setDoc(doc(db, 'restaurants', restaurantId), {
+        name: `${name || 'My Restaurant'} Menu`,
+        slug,
+        ownerId: user.uid,
+        plan: 'free',
+        status: 'active',
+        currency: 'TND',
+        language: 'fr',
+        watermarkEnabled: true,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      // Create user profile
+      await setDoc(doc(db, 'users', user.uid), {
+        email: user.email,
+        displayName: name,
+        restaurantId,
+        role: 'owner',
+        createdAt: serverTimestamp(),
+      });
+
+      toast({
+        title: 'Account created!',
+        description: 'Your free restaurant menu is ready.',
+      });
+
+      router.push('/dashboard');
+    } catch (err: unknown) {
+      const firebaseError = err as { code?: string };
+      if (firebaseError.code === 'auth/email-already-in-use') {
+        setError('This email is already registered. Please sign in instead.');
+      } else if (firebaseError.code === 'auth/weak-password') {
+        setError('Password should be at least 6 characters.');
       } else {
-        setError('Invalid credentials. Please try again.');
+        setError('Failed to create account. Please try again.');
       }
-    } catch (err) {
-      console.error('Login error:', err);
-      setError('Failed to sign in. Please check your credentials.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDemoLogin = () => {
+  // Handle Email Sign In
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
     setLoading(true);
-    // Simulate demo login
-    setTimeout(() => {
-      setUser({
-        uid: 'demo-user',
-        email: 'demo@menux.app',
-        role: 'manager',
-        staffProfile: {
-          name: 'Demo Manager',
-          role: 'manager',
-        },
-      });
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
       router.push('/dashboard');
-    }, 800);
+    } catch (err: unknown) {
+      const firebaseError = err as { code?: string };
+      if (firebaseError.code === 'auth/invalid-credential' || firebaseError.code === 'auth/wrong-password') {
+        setError('Invalid email or password.');
+      } else if (firebaseError.code === 'auth/user-not-found') {
+        setError('No account found with this email.');
+      } else {
+        setError('Failed to sign in. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const features = [
@@ -94,7 +224,7 @@ export default function LoginPage() {
               <div className="w-10 h-10 bg-secondary-fixed/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Coffee className="w-6 h-6 text-secondary-fixed" />
               </div>
-              Menux
+              MenuxPro
             </Link>
           </div>
           
@@ -124,18 +254,32 @@ export default function LoginPage() {
                 </div>
               ))}
             </div>
+
+            {/* Free Plan Info */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
+              <div className="flex items-center gap-3 mb-3">
+                <Building2 className="w-6 h-6 text-secondary-fixed" />
+                <span className="font-semibold text-white">Start Free</span>
+              </div>
+              <p className="text-sm text-white/80">
+                Create your digital menu for free. QR codes, table ordering, and real-time dashboard included.
+                Upgrade to Pro for custom branding and unlimited items.
+              </p>
+            </div>
           </div>
           
           <div className="flex items-center gap-6 text-primary-fixed text-sm">
-            <span>© 2024 Menux</span>
+            <span>© 2026 MenuxPro</span>
             <span>•</span>
             <Link href="/" className="hover:text-secondary transition-colors">Home</Link>
-            <Link href="/r/demo" className="hover:text-secondary transition-colors">Demo Menu</Link>
+            <Link href="https://wa.me/21656110674" target="_blank" className="hover:text-secondary transition-colors">
+              Contact
+            </Link>
           </div>
         </div>
       </div>
       
-      {/* Right Side - Login Form */}
+      {/* Right Side - Auth Form */}
       <div className="flex-1 flex items-center justify-center p-6 md:p-12 bg-surface">
         <div className="w-full max-w-md animate-fade-in">
           {/* Mobile Logo */}
@@ -144,26 +288,70 @@ export default function LoginPage() {
               <div className="w-12 h-12 bg-secondary-container rounded-xl flex items-center justify-center">
                 <Coffee className="w-7 h-7 text-on-secondary-container" />
               </div>
-              Menux
+              MenuxPro
             </Link>
           </div>
           
           <div className="mb-8">
             <h2 className="font-display text-3xl text-primary mb-2">
-              Welcome back
+              {mode === 'login' ? 'Welcome back' : 'Create your account'}
             </h2>
             <p className="text-on-surface-variant">
-              Sign in to access your dashboard
+              {mode === 'login' 
+                ? 'Sign in to access your dashboard' 
+                : 'Start your free digital menu today'}
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Google Auth Button */}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleGoogleAuth}
+            disabled={loading || googleLoading}
+            className="w-full py-4 rounded-xl font-semibold border-2 border-outline-variant hover:border-secondary hover:bg-secondary-fixed/10 transition-all duration-300 mb-6"
+          >
+            {googleLoading ? (
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+            ) : (
+              <Chrome className="w-5 h-5 mr-2" />
+            )}
+            Continue with Google
+          </Button>
+
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-outline-variant" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-surface text-on-surface-variant">or</span>
+            </div>
+          </div>
+
+          <form onSubmit={mode === 'login' ? handleSignIn : handleSignUp} className="space-y-6">
             {error && (
               <div className="bg-error-container text-on-error-container p-4 rounded-xl text-sm flex items-center gap-3 animate-slide-in-up">
                 <div className="w-8 h-8 bg-error/20 rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-error">!</span>
                 </div>
                 {error}
+              </div>
+            )}
+
+            {mode === 'signup' && (
+              <div className="space-y-2">
+                <Label htmlFor="name" className="font-label-caps text-xs text-on-surface-variant tracking-wider">
+                  RESTAURANT NAME
+                </Label>
+                <Input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Café Bella Vista"
+                  required
+                  className="w-full p-4 border border-outline-variant rounded-xl font-body bg-surface-container-low focus:border-secondary focus:ring-2 focus:ring-secondary/20 transition-all"
+                />
               </div>
             )}
             
@@ -176,7 +364,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="staff@restaurant.com"
+                placeholder="owner@restaurant.com"
                 required
                 className="w-full p-4 border border-outline-variant rounded-xl font-body bg-surface-container-low focus:border-secondary focus:ring-2 focus:ring-secondary/20 transition-all"
               />
@@ -187,9 +375,11 @@ export default function LoginPage() {
                 <Label htmlFor="password" className="font-label-caps text-xs text-on-surface-variant tracking-wider">
                   PASSWORD
                 </Label>
-                <Link href="#" className="text-xs text-secondary hover:underline">
-                  Forgot password?
-                </Link>
+                {mode === 'login' && (
+                  <Link href="#" className="text-xs text-secondary hover:underline">
+                    Forgot password?
+                  </Link>
+                )}
               </div>
               <div className="relative">
                 <Input
@@ -197,7 +387,7 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
+                  placeholder={mode === 'signup' ? 'At least 6 characters' : 'Enter your password'}
                   required
                   className="w-full p-4 border border-outline-variant rounded-xl font-body bg-surface-container-low focus:border-secondary focus:ring-2 focus:ring-secondary/20 transition-all pr-12"
                 />
@@ -211,72 +401,84 @@ export default function LoginPage() {
               </div>
             </div>
             
-            <div className="flex items-center gap-3">
-              <input 
-                type="checkbox" 
-                id="remember"
-                className="w-4 h-4 rounded border-outline text-secondary focus:ring-secondary/50 cursor-pointer" 
-              />
-              <label htmlFor="remember" className="text-sm text-on-surface-variant cursor-pointer">
-                Remember me for 30 days
-              </label>
-            </div>
-            
             <Button
               type="submit"
-              disabled={loading}
+              disabled={loading || googleLoading}
               className="w-full bg-primary text-on-primary py-4 rounded-xl font-semibold text-base hover:opacity-90 shadow-lg hover:shadow-xl transition-all duration-300 group"
             >
               {loading ? (
                 <>
                   <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Signing in...
+                  {mode === 'login' ? 'Signing in...' : 'Creating account...'}
                 </>
               ) : (
                 <>
-                  Sign In
-                  <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                  {mode === 'login' ? (
+                    <>
+                      Sign In
+                      <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-5 h-5 mr-2" />
+                      Create Free Account
+                    </>
+                  )}
                 </>
               )}
             </Button>
           </form>
-          
-          {/* Divider */}
-          <div className="relative my-8">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-outline-variant" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-surface text-on-surface-variant">or</span>
-            </div>
-          </div>
-          
-          {/* Demo Login */}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleDemoLogin}
-            disabled={loading}
-            className="w-full py-4 rounded-xl font-semibold border-2 border-outline-variant hover:border-secondary hover:bg-secondary-fixed/10 transition-all duration-300"
-          >
-            {loading ? (
-              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+
+          {/* Mode Switch */}
+          <div className="mt-8 text-center text-sm text-on-surface-variant">
+            {mode === 'login' ? (
+              <>
+                Don&apos;t have an account?{' '}
+                <button 
+                  onClick={() => setMode('signup')}
+                  className="text-secondary hover:underline font-medium"
+                >
+                  Start free
+                </button>
+              </>
             ) : (
               <>
-                <Check className="w-5 h-5 mr-2 text-secondary" />
-                Try Demo Dashboard
+                Already have an account?{' '}
+                <button 
+                  onClick={() => setMode('login')}
+                  className="text-secondary hover:underline font-medium"
+                >
+                  Sign in
+                </button>
               </>
             )}
-          </Button>
-          
-          <div className="mt-8 text-center text-sm text-on-surface-variant">
-            Don&apos;t have an account?{' '}
-            <Link href="#" className="text-secondary hover:underline font-medium">
-              Contact sales
-            </Link>
+          </div>
+
+          {/* WhatsApp Contact */}
+          <div className="mt-6 pt-6 border-t border-outline-variant text-center">
+            <a 
+              href="https://wa.me/21656110674" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-xs text-on-surface-variant hover:text-secondary transition-colors"
+            >
+              Need help? Contact us on WhatsApp
+            </a>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-surface">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
