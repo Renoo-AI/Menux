@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Plus, Download, Eye, QrCode, X, AlertCircle, Loader2, Check, Search, AlertTriangle, Trash2 } from 'lucide-react';
+import { Plus, Download, Eye, QrCode, X, AlertCircle, Loader2, Check, Search, AlertTriangle, Trash2, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DashboardLayout } from '@/components/layout';
@@ -120,6 +120,91 @@ export default function TablesPage() {
       return table;
     }));
   };
+
+  // Download QR code as PNG
+  const downloadQRCode = useCallback((tableName: string, qrUrl: string) => {
+    // Find the SVG element
+    const svgElement = document.querySelector(`[data-qr-table="${tableName}"] svg`);
+    if (!svgElement) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Could not generate QR code image.',
+      });
+      return;
+    }
+
+    // Create canvas
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Set canvas size
+    const size = 400;
+    canvas.width = size;
+    canvas.height = size;
+
+    // Convert SVG to image
+    const svgData = new XMLSerializer().serializeToString(svgElement);
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+    
+    const img = new Image();
+    img.onload = () => {
+      // Draw white background
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, size, size);
+      
+      // Draw QR code centered
+      const padding = 40;
+      const qrSize = size - (padding * 2);
+      ctx.drawImage(img, padding, padding, qrSize, qrSize);
+      
+      // Add table name label
+      ctx.fillStyle = '#3A322D';
+      ctx.font = 'bold 24px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(tableName, size / 2, size - 15);
+      
+      // Download
+      const link = document.createElement('a');
+      link.download = `menux-qr-${tableName.toLowerCase().replace(/[^a-z0-9]/g, '-')}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: 'QR Code Downloaded',
+        description: `QR code for ${tableName} has been saved to your downloads.`,
+      });
+    };
+    img.src = url;
+  }, [toast]);
+
+  // Share QR code URL
+  const shareQRCode = useCallback(async (tableName: string, qrUrl: string) => {
+    const fullUrl = `${baseUrl}${qrUrl}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Menux - ${tableName}`,
+          text: `Scan to view the menu for ${tableName}`,
+          url: fullUrl,
+        });
+      } catch {
+        // User cancelled or share failed
+      }
+    } else {
+      // Fallback: copy to clipboard
+      await navigator.clipboard.writeText(fullUrl);
+      toast({
+        title: 'Link Copied',
+        description: `The link for ${tableName} has been copied to your clipboard.`,
+      });
+    }
+  }, [baseUrl, toast]);
 
   const onCreateTable = useCallback(async () => {
     setIsCreating(true);
@@ -415,7 +500,7 @@ export default function TablesPage() {
                 </div>
 
                 {/* QR Code */}
-                <div className="flex-1 flex justify-center items-center py-4 bg-surface-container-low rounded-lg mb-4 group-hover:bg-surface-container transition-colors">
+                <div className="flex-1 flex justify-center items-center py-4 bg-surface-container-low rounded-lg mb-4 group-hover:bg-surface-container transition-colors" data-qr-table={table.name}>
                   <div className="w-32 h-32 bg-white rounded flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
                     <QRCodeSVG value={qrUrl} size={120} level="H" />
                   </div>
@@ -429,13 +514,24 @@ export default function TablesPage() {
                       {stateStyle.label}
                     </span>
                     <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" className="text-primary hover:text-secondary hover:scale-105 transition-all">
-                        <Download className="w-4 h-4 mr-1" />
-                        Download
-                      </Button>
+                      <button 
+                        onClick={() => downloadQRCode(table.name, table.qrCodeUrl)}
+                        className="p-2 rounded-full bg-surface-container-low text-primary hover:bg-secondary-fixed hover:text-on-secondary-fixed-variant transition-all duration-300 hover:scale-110"
+                        title="Download QR Code"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => shareQRCode(table.name, table.qrCodeUrl)}
+                        className="p-2 rounded-full bg-surface-container-low text-primary hover:bg-secondary-fixed hover:text-on-secondary-fixed-variant transition-all duration-300 hover:scale-110"
+                        title="Share Link"
+                      >
+                        <Share2 className="w-4 h-4" />
+                      </button>
                       <button 
                         onClick={() => handleDeleteClick(table)}
                         className="p-2 rounded-full bg-surface-container-low text-error hover:bg-error-container transition-all duration-300 hover:scale-110"
+                        title="Delete Table"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -449,11 +545,20 @@ export default function TablesPage() {
                     </div>
                   ) : table.state === 'AVAILABLE' ? (
                     <div className="grid grid-cols-2 gap-2">
-                      <Button size="sm" variant="outline" className="bg-surface-container-high text-primary hover:bg-surface-container">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="bg-surface-container-high text-primary hover:bg-surface-container"
+                        onClick={() => window.open(qrUrl, '_blank')}
+                      >
                         <Eye className="w-4 h-4 mr-1" />
                         PREVIEW
                       </Button>
-                      <Button size="sm" className="bg-primary text-on-primary hover:opacity-90">
+                      <Button 
+                        size="sm" 
+                        className="bg-primary text-on-primary hover:opacity-90"
+                        onClick={() => downloadQRCode(table.name, table.qrCodeUrl)}
+                      >
                         <Download className="w-4 h-4 mr-1" />
                         QR CODE
                       </Button>

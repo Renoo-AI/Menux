@@ -13,7 +13,8 @@ import {
   LogOut,
   Plus,
   History,
-  Receipt
+  Receipt,
+  ChefHat
 } from 'lucide-react';
 
 interface NavItem {
@@ -24,6 +25,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
+  { href: '/dashboard/kitchen', label: 'Kitchen', icon: <ChefHat className="w-5 h-5" /> },
   { href: '/dashboard/history', label: 'History', icon: <History className="w-5 h-5" /> },
   { href: '/dashboard/menu', label: 'Menu', icon: <BookOpen className="w-5 h-5" /> },
   { href: '/dashboard/tables', label: 'Tables', icon: <UtensilsCrossed className="w-5 h-5" /> },
