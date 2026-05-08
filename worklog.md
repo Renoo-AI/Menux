@@ -671,3 +671,36 @@ Stage Summary:
 - Input height: h-12 with px-4 py-3
 - Added utility classes: text-outline, text-espresso, text-accent, luxury-shadow, shadow-card, border-outline, etc.
 - Added missing typography classes: text-title-lg, text-title-md, text-title-sm, font-body-lg, font-body-md, font-label-sm
+
+---
+Task ID: CSS-02
+Agent: Main Agent
+Task: Fix text wrapping bug - text displaying word-by-word vertically
+
+Work Log:
+- **globals.css** - Added text flow fixes:
+  - Added `word-break: normal` and `overflow-wrap: normal` to body
+  - Added global text flow fix for all text elements (p, h1-h6, span, li, td, th, label, a, button, div)
+  - Added `.break-words-allowed` utility class for intentional word breaking
+  - Added text flow fixes for flex and grid containers
+  - Added minimum width constraints for hero and card content
+  - Added responsive text container widths for mobile breakpoints
+  - Added proper whitespace handling for buttons, badges, chips
+
+- **page.tsx** (Landing page):
+  - Added `min-w-0` to hero content container to prevent text squishing
+  - Added `text-balance` to hero paragraph for better text wrapping
+
+- **SideNavBar.tsx**:
+  - Added `whitespace-nowrap` to all navigation links to prevent text wrapping
+
+- **BottomNavBar.tsx**:
+  - Added `whitespace-nowrap` to navigation items and labels
+
+Stage Summary:
+- ✅ Fixed text wrapping issues across all pages
+- ✅ Text now flows naturally in normal sentences, not word-by-word vertically
+- ✅ Lint passes (only pre-existing font warning)
+- ✅ Dev server running without issues
+- ✅ Created cron job for web dev review (ID: 137967) - runs every 15 minutes
+- ⚠️ User should verify fix at multiple breakpoints (360px, 390px, tablet, 1280px)

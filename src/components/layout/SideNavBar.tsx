@@ -96,7 +96,7 @@ export function SideNavBar({ restaurantName = 'Menux Pro', userRole }: SideNavBa
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-4 mx-4 px-4 py-3 rounded-full transition-all',
+                'flex items-center gap-4 mx-4 px-4 py-3 rounded-full transition-all whitespace-nowrap',
                 isActive 
                   ? 'bg-secondary-fixed text-on-secondary-fixed-variant font-bold' 
                   : 'text-on-surface-variant font-medium hover:bg-surface-container-high'
@@ -124,14 +124,14 @@ export function SideNavBar({ restaurantName = 'Menux Pro', userRole }: SideNavBa
       <div className="flex flex-col gap-1 border-t border-outline-variant pt-4 mt-4">
         <Link
           href="/help"
-          className="flex items-center gap-4 mx-4 px-4 py-3 text-on-surface-variant font-medium hover:bg-surface-container-high transition-all rounded-full"
+          className="flex items-center gap-4 mx-4 px-4 py-3 text-on-surface-variant font-medium hover:bg-surface-container-high transition-all rounded-full whitespace-nowrap"
         >
           <HelpCircle className="w-5 h-5" />
           <span className="font-title-sm text-label-caps">Support</span>
         </Link>
         <Link
           href="/login"
-          className="flex items-center gap-4 mx-4 px-4 py-3 text-error font-medium hover:bg-error-container/20 transition-all rounded-full"
+          className="flex items-center gap-4 mx-4 px-4 py-3 text-error font-medium hover:bg-error-container/20 transition-all rounded-full whitespace-nowrap"
         >
           <LogOut className="w-5 h-5" />
           <span className="font-title-sm text-label-caps">Logout</span>

@@ -169,6 +169,19 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.6;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+/* Global text flow fix - prevent word-by-word vertical stacking */
+p, h1, h2, h3, h4, h5, h6, span, li, td, th, label, a, button, div {
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+/* Allow breaking only for long content that truly needs it */
+.break-words-allowed {
+  overflow-wrap: break-word;
 }
 
 /* ============================================
@@ -851,6 +864,11 @@ body {
   .text-display-xl { font-size: 36px; }
   .text-display-lg { font-size: 28px; }
   .text-display-md { font-size: 24px; }
+  
+  /* Ensure text containers have enough width on mobile */
+  .hero-text, .section-header, .card-content {
+    min-width: 200px;
+  }
 }
 
 @media (min-width: 769px) {
@@ -900,5 +918,92 @@ body {
 @media (min-width: 1024px) {
   .section-gap {
     gap: 4rem;
+  }
+}
+
+/* ============================================
+   TEXT FLOW FIXES
+   Prevent vertical word-by-word stacking
+   ============================================ */
+
+/* Ensure proper text flow in flex containers */
+.flex > p,
+.flex > span,
+.flex > h1,
+.flex > h2,
+.flex > h3,
+.flex-col > p,
+.flex-col > span,
+.flex-col > h1,
+.flex-col > h2,
+.flex-col > h3 {
+  min-width: 0;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+/* Fix for narrow grid columns */
+.grid > * {
+  min-width: 0;
+}
+
+.grid > * > p,
+.grid > * > span,
+.grid > * > h1,
+.grid > * > h2,
+.grid > * > h3 {
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+/* Ensure buttons have proper text flow */
+button, .btn-primary, .btn-secondary, .btn-outline {
+  word-break: normal;
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+
+/* Fix for card titles and descriptions */
+.card h1, .card h2, .card h3, .card p,
+.card-elevated h1, .card-elevated h2, .card-elevated h3, .card-elevated p,
+[data-slot="card"] h1, [data-slot="card"] h2, [data-slot="card"] h3, [data-slot="card"] p {
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+/* Fix for sidebar navigation text */
+aside nav a span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Fix for KPI cards and stats */
+[class*="stat"], [class*="kpi"], [class*="metric"] {
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+/* Fix for badges and chips - allow them to be wider */
+.chip, .badge, [data-slot="badge"] {
+  white-space: nowrap;
+  min-width: fit-content;
+}
+
+/* Responsive text container widths */
+.hero-container {
+  max-width: 100%;
+  min-width: 280px;
+}
+
+@media (min-width: 640px) {
+  .hero-container {
+    min-width: 320px;
+  }
+}
+
+@media (min-width: 768px) {
+  .hero-container {
+    min-width: 400px;
   }
 }

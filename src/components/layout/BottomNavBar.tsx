@@ -79,7 +79,7 @@ export function BottomNavBar({ variant = 'public' }: BottomNavBarProps) {
             key={item.href}
             href={item.href}
             className={cn(
-              'flex flex-col items-center justify-center p-2 transition-all',
+              'flex flex-col items-center justify-center p-2 transition-all whitespace-nowrap',
               isActive 
                 ? 'bg-secondary-container text-on-secondary-container rounded-full px-4 py-2' 
                 : 'text-on-surface-variant hover:text-primary'
@@ -87,7 +87,7 @@ export function BottomNavBar({ variant = 'public' }: BottomNavBarProps) {
           >
             {item.icon}
             <span className={cn(
-              'font-label-caps text-label-caps mt-1',
+              'font-label-caps text-label-caps mt-1 whitespace-nowrap',
               isActive ? 'text-on-secondary-container' : ''
             )}>
               {item.label}

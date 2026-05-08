@@ -39,12 +39,12 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="relative pt-40 pb-32 px-8 md:px-16 max-w-7xl mx-auto overflow-hidden">
         <div className="flex flex-col md:flex-row items-center gap-8">
-          <div className="w-full md:w-1/2 flex flex-col gap-6">
+          <div className="w-full md:w-1/2 flex flex-col gap-6 min-w-0">
             <h1 className="font-display text-display-xl text-primary leading-tight">
               Le menu digital <br/>
               <span className="italic font-normal">nouvelle génération.</span>
             </h1>
-            <p className="font-body-lg text-on-surface-variant max-w-lg">
+            <p className="font-body-lg text-on-surface-variant max-w-lg text-balance">
               QR menus and table ordering designed for modern cafés and restaurants. 
               L&apos;élégance du papier, la puissance du digital.
             </p>
