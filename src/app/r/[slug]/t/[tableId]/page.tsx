@@ -58,12 +58,17 @@ export default function TableOrderingPage({ params }: { params: Promise<{ slug: 
         setTable(tableData);
         
         // Check if table is available for ordering
-        if (tableData.state === 'ACTIVE') {
+        if (tableData.status === 'ACTIVE' || tableData.status === 'NEW_ORDER') {
           setError('This table already has an active order. Please speak with staff.');
           return;
         }
         
-        if (tableData.state === 'OFFLINE') {
+        if (tableData.status === 'AWAITING_PAYMENT') {
+          setError('This table is awaiting payment. Please speak with staff.');
+          return;
+        }
+        
+        if (tableData.status === 'OFFLINE') {
           setError('This table is currently unavailable. Please speak with staff.');
           return;
         }

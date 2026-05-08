@@ -12,7 +12,7 @@ import {
   updateDoc,
   Timestamp
 } from 'firebase/firestore';
-import type { Table, TableDocument, TableState } from '@/types';
+import type { Table, TableDocument, TableStatus } from '@/types';
 
 const COLLECTION = 'tables';
 
@@ -98,17 +98,20 @@ export function subscribeToTable(
   });
 }
 
-// Update table state (for dashboard use)
-export async function updateTableState(
+// Update table status (for dashboard use)
+export async function updateTableStatus(
   tableId: string, 
-  state: TableState
+  status: TableStatus
 ): Promise<void> {
   const docRef = doc(db, COLLECTION, tableId);
   await updateDoc(docRef, {
-    state,
+    status,
     updatedAt: Timestamp.now(),
   });
 }
+
+// Legacy alias for backwards compatibility
+export const updateTableState = updateTableStatus;
 
 // Generate QR code URL for a table
 export function generateQRCodeUrl(
@@ -126,6 +129,7 @@ export const tableService = {
   getTableByName,
   subscribeToTables,
   subscribeToTable,
+  updateTableStatus,
   updateTableState,
   generateQRCodeUrl,
 };

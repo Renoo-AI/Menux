@@ -1,12 +1,17 @@
-// Menux Type Definitions
+// MenuxPro Type Definitions
+// Complete type system for MVP
 
 // ============ Enums ============
 
-export type TableState = 'AVAILABLE' | 'ACTIVE' | 'OFFLINE';
+export type TableStatus = 'EMPTY' | 'NEW_ORDER' | 'ACTIVE' | 'AWAITING_PAYMENT' | 'OFFLINE';
 
-export type OrderState = 'NEW' | 'ACCEPTED' | 'COMPLETED' | 'CANCELLED';
+export type OrderStatus = 'CREATED' | 'ACCEPTED' | 'REJECTED' | 'PAID' | 'CLOSED' | 'CANCELLED';
 
-export type UserRole = 'owner' | 'manager' | 'waiter' | 'staff';
+export type StaffRole = 'cashier' | 'owner' | 'admin';
+
+export type RestaurantStatus = 'ACTIVE' | 'OFFLINE';
+
+export type Currency = 'TND' | 'QAR' | 'EUR' | 'USD';
 
 // ============ Core Models ============
 
@@ -14,11 +19,18 @@ export interface Restaurant {
   id: string;
   slug: string;
   name: string;
+  status: RestaurantStatus;
+  currency: Currency;
   cuisineType?: string;
   address?: string;
   logoUrl?: string;
   phone?: string;
   email?: string;
+  branding?: {
+    logoUrl?: string;
+    primaryColor?: string;
+    accentColor?: string;
+  };
   openingHours?: OpeningHours;
   createdAt: Date;
   updatedAt: Date;
@@ -36,12 +48,15 @@ export interface Table {
   name: string; // e.g., "T-01", "B-01"
   label?: string; // e.g., "Window Side", "Bar Stool"
   seats: number;
-  state: TableState;
+  status: TableStatus;
   qrCodeUrl: string;
-  currentOrderId?: string;
+  activeOrderId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
+
+// Legacy type alias for backwards compatibility
+export type TableState = TableStatus;
 
 export interface MenuCategory {
   id: string;
@@ -62,9 +77,10 @@ export interface MenuItem {
   description?: string;
   price: number;
   imageUrl?: string;
-  isAvailable: boolean;
+  available: boolean;
   isFeatured?: boolean;
   tags?: string[]; // e.g., ["VEGAN", "POPULAR", "BESTSELLER"]
+  allergens?: string[]; // e.g., ["GLUTEN", "DAIRY", "NUTS"]
   sortOrder: number;
   createdAt: Date;
   updatedAt: Date;
@@ -74,6 +90,7 @@ export interface OrderItem {
   itemId: string;
   name: string;
   quantity: number;
+  price: number;
   unitPrice: number;
   notes?: string;
 }
@@ -84,22 +101,66 @@ export interface Order {
   tableId: string;
   tableName: string;
   items: OrderItem[];
+  subtotal: number;
   totalAmount: number;
-  state: OrderState;
+  status: OrderStatus;
   notes?: string;
+  customerNote?: string;
+  rejectReason?: string;
+  cancelReason?: string;
   createdAt: Date;
   updatedAt: Date;
   acceptedAt?: Date;
-  completedAt?: Date;
+  paidAt?: Date;
+  closedAt?: Date;
   cancelledAt?: Date;
-  cancelledReason?: string;
 }
+
+// Legacy type alias for backwards compatibility
+export type OrderState = OrderStatus;
+
+export interface StaffMember {
+  id: string;
+  restaurantId: string;
+  name: string;
+  role: StaffRole;
+  pinHash?: string;
+  pin?: string; // Only for demo/seed purposes
+  active: boolean;
+  avatarUrl?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Legacy type alias for backwards compatibility
+export type Staff = StaffMember;
+export type UserRole = StaffRole;
+
+export type LogAction =
+  | 'ORDER_CREATED'
+  | 'ORDER_ACCEPTED'
+  | 'ORDER_REJECTED'
+  | 'ORDER_CANCELLED'
+  | 'ORDER_PAID'
+  | 'ORDER_CLOSED'
+  | 'TABLE_DISABLED'
+  | 'TABLE_ENABLED'
+  | 'MENU_ITEM_UPDATED'
+  | 'STAFF_LOGIN';
 
 export interface ActivityLog {
   id: string;
   restaurantId: string;
-  type: 'order_created' | 'order_accepted' | 'order_completed' | 'order_cancelled' | 'table_opened' | 'table_closed' | 'staff_action' | 'system_event';
-  message: string;
+  actorId?: string;
+  actorName?: string;
+  actorRole?: StaffRole | 'customer' | 'system';
+  action: LogAction;
+  targetType: 'order' | 'table' | 'menuItem' | 'staff' | 'restaurant';
+  targetId: string;
+  before?: unknown;
+  after?: unknown;
+  reason?: string;
+  message?: string; // Legacy field
   metadata?: Record<string, unknown>;
   userId?: string;
   userName?: string;
@@ -108,16 +169,15 @@ export interface ActivityLog {
   createdAt: Date;
 }
 
-export interface Staff {
-  id: string;
+// ============ Staff Session Types ============
+
+export interface StaffSession {
   restaurantId: string;
-  email: string;
-  name: string;
-  role: UserRole;
-  isActive: boolean;
-  avatarUrl?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  restaurantSlug: string;
+  restaurantName: string;
+  staffId: string;
+  staffName: string;
+  role: StaffRole;
 }
 
 // ============ Cart Types ============
@@ -155,6 +215,55 @@ export interface CreateOrderResponse {
   error?: string;
 }
 
+// ============ Cashier Action Types ============
+
+export interface AcceptOrderParams {
+  restaurantId: string;
+  orderId: string;
+  tableId: string;
+  actorId: string;
+  actorName: string;
+  actorRole: StaffRole;
+}
+
+export interface RejectOrderParams {
+  restaurantId: string;
+  orderId: string;
+  tableId: string;
+  reason: string;
+  actorId: string;
+  actorName: string;
+  actorRole: StaffRole;
+}
+
+export interface MarkPaidParams {
+  restaurantId: string;
+  orderId: string;
+  tableId: string;
+  actorId: string;
+  actorName: string;
+  actorRole: StaffRole;
+}
+
+export interface CloseOrderParams {
+  restaurantId: string;
+  orderId: string;
+  tableId: string;
+  actorId: string;
+  actorName: string;
+  actorRole: StaffRole;
+}
+
+export interface CancelOrderParams {
+  restaurantId: string;
+  orderId: string;
+  tableId: string;
+  reason: string;
+  actorId: string;
+  actorName: string;
+  actorRole: StaffRole;
+}
+
 // ============ Firestore Document Types ============
 
 export interface RestaurantDocument extends Omit<Restaurant, 'createdAt' | 'updatedAt'> {
@@ -175,4 +284,13 @@ export interface MenuItemDocument extends Omit<MenuItem, 'createdAt' | 'updatedA
 export interface OrderDocument extends Omit<Order, 'createdAt' | 'updatedAt'> {
   createdAt: { seconds: number; nanoseconds: number };
   updatedAt: { seconds: number; nanoseconds: number };
+}
+
+export interface StaffDocument extends Omit<StaffMember, 'createdAt' | 'updatedAt'> {
+  createdAt: { seconds: number; nanoseconds: number };
+  updatedAt: { seconds: number; nanoseconds: number };
+}
+
+export interface ActivityLogDocument extends Omit<ActivityLog, 'createdAt'> {
+  createdAt: { seconds: number; nanoseconds: number };
 }

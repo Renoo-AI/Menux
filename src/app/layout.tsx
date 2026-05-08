@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/components/theme-provider";
+import { StaffSessionProvider } from "@/contexts/StaffSessionContext";
 
 // Menux Brand Fonts
 const playfairDisplay = Playfair_Display({
@@ -64,10 +65,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <ErrorBoundary>
-            {children}
-          </ErrorBoundary>
-          <Toaster />
+          <StaffSessionProvider>
+            <ErrorBoundary>
+              {children}
+            </ErrorBoundary>
+            <Toaster />
+          </StaffSessionProvider>
         </ThemeProvider>
       </body>
     </html>

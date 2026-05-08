@@ -1,28 +1,62 @@
 import { db } from '@/lib/firebase';
 import { 
   collection, 
+  doc,
+  addDoc,
   query, 
   where, 
   getDocs,
   onSnapshot,
   orderBy,
   limit,
-  DocumentSnapshot
+  DocumentSnapshot,
+  serverTimestamp
 } from 'firebase/firestore';
-import type { ActivityLog } from '@/types';
+import type { ActivityLog, ActivityLogDocument, LogAction, StaffRole } from '@/types';
 
-const COLLECTION = 'activityLogs';
+const COLLECTION = 'logs';
 
 // Convert Firestore document to ActivityLog type
-function documentToActivityLog(doc: DocumentSnapshot): ActivityLog | null {
-  if (!doc.exists()) return null;
+function documentToActivityLog(docSnap: DocumentSnapshot): ActivityLog | null {
+  if (!docSnap.exists()) return null;
   
-  const data = doc.data();
+  const data = docSnap.data() as ActivityLogDocument;
   return {
-    id: doc.id,
+    id: docSnap.id,
     ...data,
     createdAt: new Date(data.createdAt.seconds * 1000),
-  } as ActivityLog;
+  };
+}
+
+// Create a new activity log
+export async function createLog(params: {
+  restaurantId: string;
+  actorId?: string;
+  actorName?: string;
+  actorRole?: StaffRole | 'customer' | 'system';
+  action: LogAction;
+  targetType: 'order' | 'table' | 'menuItem' | 'staff' | 'restaurant';
+  targetId: string;
+  before?: unknown;
+  after?: unknown;
+  reason?: string;
+}): Promise<string> {
+  const logData = {
+    restaurantId: params.restaurantId,
+    actorId: params.actorId || 'system',
+    actorName: params.actorName || 'System',
+    actorRole: params.actorRole || 'system',
+    action: params.action,
+    targetType: params.targetType,
+    targetId: params.targetId,
+    before: params.before || null,
+    after: params.after || null,
+    reason: params.reason || null,
+    createdAt: serverTimestamp(),
+  };
+  
+  const docRef = await addDoc(collection(db, COLLECTION), logData);
+  return docRef.id;
 }
 
 // Get recent activity logs for a restaurant
@@ -77,23 +111,31 @@ export async function getDailySummary(restaurantId: string): Promise<{
   const q = query(
     collection(db, COLLECTION),
     where('restaurantId', '==', restaurantId),
-    where('createdAt', '>=', today)
+    orderBy('createdAt', 'desc'),
+    limit(100)
   );
   
   const snapshot = await getDocs(q);
-  const logs = snapshot.docs.map(documentToActivityLog).filter(Boolean) as ActivityLog[];
+  const logs = snapshot.docs
+    .map(documentToActivityLog)
+    .filter((log): log is ActivityLog => log !== null)
+    .filter(log => {
+      const logDate = new Date(log.createdAt);
+      return logDate >= today;
+    });
   
-  const orderLogs = logs.filter(l => l.type.startsWith('order_'));
+  const orderLogs = logs.filter(l => l.action.startsWith('ORDER_'));
   
   return {
-    totalOrders: orderLogs.filter(l => l.type === 'order_created').length,
-    completedOrders: orderLogs.filter(l => l.type === 'order_completed').length,
-    cancelledOrders: orderLogs.filter(l => l.type === 'order_cancelled').length,
+    totalOrders: orderLogs.filter(l => l.action === 'ORDER_CREATED').length,
+    completedOrders: orderLogs.filter(l => l.action === 'ORDER_CLOSED').length,
+    cancelledOrders: orderLogs.filter(l => l.action === 'ORDER_CANCELLED' || l.action === 'ORDER_REJECTED').length,
     revenue: 0, // This would be calculated from actual order data
   };
 }
 
 export const logService = {
+  createLog,
   getActivityLogs,
   subscribeToActivityLogs,
   getDailySummary,
