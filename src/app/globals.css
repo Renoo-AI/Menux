@@ -134,18 +134,19 @@
   --transition-slow: 300ms;
 
   /* === Spacing (Generous, comfortable spacing) === */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
-  --spacing-2xl: 48px;
-  --spacing-3xl: 64px;
-  --spacing-unit: 8px;
-  --spacing-container-max: 1440px;
-  --spacing-gutter: 32px;
-  --spacing-margin-page: 64px;
-  --spacing-section-padding: 120px;
+  /* NOTE: Using --space-* prefix to avoid conflict with Tailwind v4's --spacing-* which controls max-width */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+  --space-unit: 8px;
+  --space-container-max: 1440px;
+  --space-gutter: 32px;
+  --space-margin-page: 64px;
+  --space-section-padding: 120px;
 }
 
 @custom-variant dark (&:is(.dark *));

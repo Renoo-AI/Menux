@@ -739,3 +739,41 @@ Stage Summary:
 - ✅ Text container no longer restricted to 50% width on desktop
 - ✅ Paragraph has explicit width constraints and overflow handling
 - ✅ Lint passes
+
+---
+Task ID: CSS-04
+Agent: Main Agent
+Task: Fix text wrapping bug - ROOT CAUSE FOUND AND FIXED
+
+Work Log:
+- **ROOT CAUSE IDENTIFIED**: In Tailwind v4, the `--spacing-*` CSS variables control BOTH spacing AND max-width utilities.
+  - We defined `--spacing-3xl: 64px` in globals.css @theme block
+  - This overrode Tailwind's default `--spacing-3xl: 48rem` (768px)
+  - Result: `max-w-3xl` was being computed as 64px instead of 768px!
+
+- **globals.css** - Fixed variable naming conflict:
+  - Changed `--spacing-xs` → `--space-xs`
+  - Changed `--spacing-sm` → `--space-sm`
+  - Changed `--spacing-md` → `--space-md`
+  - Changed `--spacing-lg` → `--space-lg`
+  - Changed `--spacing-xl` → `--space-xl`
+  - Changed `--spacing-2xl` → `--space-2xl`
+  - Changed `--spacing-3xl` → `--space-3xl`
+  - Changed all other `--spacing-*` → `--space-*`
+  - Added comment explaining why we use `--space-*` prefix
+
+- **page.tsx** - Added inline styles as backup:
+  - Used `style={{ maxWidth: '48rem' }}` instead of `max-w-3xl`
+  - Used `style={{ maxWidth: '56rem' }}` instead of `max-w-4xl`
+
+Verification via agent-browser:
+- BEFORE FIX: `max-w-3xl` computed to 64px, paragraph width was 64px
+- AFTER FIX: `max-w-3xl` computes to 768px, paragraph width is 612px (full container width)
+
+Stage Summary:
+- ✅ ROOT CAUSE: Tailwind v4 uses `--spacing-*` variables for max-width utilities
+- ✅ Fixed by renaming our custom spacing variables to `--space-*`
+- ✅ `max-w-3xl` now correctly resolves to 768px
+- ✅ Paragraph text now displays as normal sentences, not word-by-word vertically
+- ✅ Lint passes (only pre-existing font warning)
+- ✅ Verified via agent-browser at 390px mobile and 1280px desktop

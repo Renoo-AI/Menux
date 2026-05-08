@@ -41,12 +41,12 @@ export default function LandingPage() {
         <div className="mx-auto w-full max-w-7xl">
           <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)] lg:gap-16">
             {/* Text Content */}
-            <div className="w-full min-w-0 max-w-3xl">
-              <h1 className="font-display text-display-xl text-primary leading-tight max-w-4xl">
+            <div className="w-full min-w-0" style={{ maxWidth: '48rem' }}>
+              <h1 className="font-display text-display-xl text-primary leading-tight" style={{ maxWidth: '56rem' }}>
                 Le menu digital <br/>
                 <span className="italic font-normal">nouvelle génération.</span>
               </h1>
-              <p className="mt-6 w-full max-w-3xl whitespace-normal break-normal text-lg md:text-xl leading-8 text-on-surface-variant" style={{ overflowWrap: 'normal' }}>
+              <p className="mt-6 w-full whitespace-normal break-normal text-lg md:text-xl leading-8 text-on-surface-variant" style={{ maxWidth: '48rem', overflowWrap: 'normal' }}>
                 QR menus and table ordering designed for modern cafés and restaurants. 
                 L&apos;élégance du papier, la puissance du digital.
               </p>
