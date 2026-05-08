@@ -3,7 +3,7 @@
 ## Current Project Status
 
 **Status**: Production-ready MVP with Firebase Integration and Superadmin Access
-**Last Updated**: January 2025 - Firebase & Superadmin Configuration Session
+**Last Updated**: January 2025 - Firebase & Offline Mode Fix Session
 
 ### Current Assessment
 - ✅ Premium Café SaaS design system implemented
@@ -22,12 +22,57 @@
 - ✅ **NEW: Firebase credentials configured for project menuxtn**
 - ✅ **NEW: Superadmin system with UID rjAbnlO0deNZRavuHgfBsxRZTVY2**
 - ✅ **NEW: Tabbed login page with Staff/Admin tabs**
+- ✅ **NEW: Offline/demo mode fallback for all Firebase services**
 - ✅ All 22+ pages working correctly (200 status)
 - ✅ ESLint: 0 errors, 1 non-critical warning (font config)
 
 ---
 
 ## Session Summary
+
+---
+Task ID: 22
+Agent: Firebase Offline Fix Agent
+Task: Fix Firebase offline error and add demo mode fallback
+
+Work Log:
+- Identified FirebaseError: "Failed to get document because the client is offline"
+- Updated restaurantService.ts with offline/demo mode handling
+  - Added isFirebaseAvailable() check function
+  - Added DEMO_RESTAURANTS data for demo and zcoffee
+  - Added try-catch with fallback to demo data
+- Updated menuService.ts with offline/demo mode handling
+  - Added DEMO_CATEGORIES and DEMO_MENU_ITEMS for both restaurants
+  - Added isFirebaseAvailable() check function
+  - All query functions now return demo data when Firebase is offline
+- Updated tableService.ts with offline/demo mode handling
+  - Added DEMO_TABLES with various table statuses
+  - Added isFirebaseAvailable() check function
+  - Subscribe functions return demo data immediately when offline
+- Updated orderService.ts with offline/demo mode handling
+  - Added DEMO_ORDERS with various order statuses (CREATED, ACCEPTED, PAID)
+  - Added isFirebaseAvailable() check function
+  - Order actions (accept, complete, cancel) succeed in demo mode
+  - Fixed addDoc syntax for Firebase
+
+Files Modified:
+- `src/services/restaurantService.ts` - Added offline handling and demo data
+- `src/services/menuService.ts` - Added offline handling and demo data
+- `src/services/tableService.ts` - Added offline handling and demo data
+- `src/services/orderService.ts` - Added offline handling and demo data
+
+Stage Summary:
+- All Firebase services now gracefully fallback to demo mode when offline
+- No more "client is offline" errors blocking the UI
+- Demo data available for both 'demo' and 'zcoffee' restaurants
+- Users can test the full application flow without Firebase connection
+- ESLint passes with 0 errors
+
+Demo Data Available:
+- Restaurants: demo, zcoffee
+- Tables: 6 tables per restaurant with various statuses
+- Menu Items: 7 items for demo, 6 items for zcoffee
+- Orders: 3 demo orders with different statuses
 
 ---
 Task ID: 21
