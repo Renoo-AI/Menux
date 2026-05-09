@@ -42,14 +42,21 @@ const SECURITY_CONFIG = {
   // Maximum time to fill a form (ms) - slower = suspicious
   maxFormFillTime: 30 * 60 * 1000, // 30 minutes
   
+  // Clock skew tolerance for form timing (ms)
+  clockSkewTolerance: 5000, // ±5 seconds
+  
   // Suspicious score threshold
   suspiciousThreshold: 10,
   
   // Honeypot field names (these should be invisible to humans)
-  honeypotFields: ['website', 'url', 'email_confirm', 'fax', 'company'],
+  // Mix of obvious and less-obvious names to catch different bot types
+  honeypotFields: ['website', 'url', 'email_confirm', 'fax', 'company', 'app_name', 'account_type', 'contact_number'],
   
-  // Ban check cache duration (ms)
-  banCacheDuration: 60 * 1000, // 1 minute
+  // Ban check cache duration (ms) - reduced for faster enforcement
+  // SECURITY: Lower value means faster ban propagation but more Firestore reads
+  // Previous: 60s - too slow for security-sensitive operations
+  // Now: 10s - balance between security and performance
+  banCacheDuration: 10 * 1000, // 10 seconds
   
   // Auto-ban thresholds
   autoBanThresholds: {

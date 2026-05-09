@@ -101,6 +101,13 @@ export const RATE_LIMIT_CONFIGS = {
     blockDurationMs: 60 * 60 * 1000, // 1 hour block
     type: 'admin_login',
   },
+  // Admin users endpoint - prevent enumeration abuse
+  adminUsers: {
+    windowMs: 60 * 1000, // 1 minute
+    maxRequests: 10, // 10 requests per minute per admin UID
+    blockDurationMs: 5 * 60 * 1000, // 5 minute block
+    type: 'admin_users',
+  },
 } as const;
 
 /**

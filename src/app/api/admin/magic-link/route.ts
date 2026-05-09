@@ -116,14 +116,15 @@ export async function POST(request: NextRequest) {
       createdBy: user.uid,
     });
 
-    // Log the action
+    // Log the action - SECURITY: Never log token values or fragments
     await db.collection('system_logs').add({
       type: 'MAGIC_LINK_CREATED',
       message: `Magic link created for restaurant ${sanitizedSlug}`,
       details: { 
-        token: newToken.slice(0, 8) + '...', 
         restaurantId: sanitizedRestaurantId,
-        expiresInDays: validExpiresInDays 
+        restaurantSlug: sanitizedSlug,
+        expiresInDays: validExpiresInDays,
+        createdAt: Date.now()
       },
       timestamp: Date.now(),
       adminUid: user.uid,

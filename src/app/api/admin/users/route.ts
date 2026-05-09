@@ -1,31 +1,75 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore } from 'firebase-admin/firestore';
 import { verifySuperAdmin, getAdminApp, isFallbackSuperadmin } from '@/lib/admin-auth';
+import { checkRateLimit, rateLimitResponse, RATE_LIMIT_CONFIGS } from '@/lib/rate-limit';
 
 function sanitizeText(text: string, maxLength: number = 200): string {
   return text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;').slice(0, maxLength);
 }
 
-// GET - Fetch all users
+// GET - Fetch users with pagination and rate limiting
 export async function GET(request: NextRequest) {
   const user = await verifySuperAdmin(request);
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Rate limit by admin UID
+  const rateLimitResult = checkRateLimit(user.uid, RATE_LIMIT_CONFIGS.adminUsers);
+  if (!rateLimitResult.allowed) {
+    return rateLimitResponse(rateLimitResult.retryAfter);
+  }
+
   try {
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100); // Max 100 per page
+    
     const app = getAdminApp();
     const db = getFirestore(app);
     
-    const [usersSnap, bansSnap] = await Promise.all([
-      db.collection('users').get().catch(() => ({ docs: [] as any[] })),
-      db.collection('banned_users').get().catch(() => ({ docs: [] as any[] })),
-    ]);
-
-    const users = usersSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+    // Get total count (approximate - Firestore doesn't have efficient counting)
+    const usersSnap = await db.collection('users').get().catch(() => ({ docs: [] as any[] }));
+    const bansSnap = await db.collection('banned_users').get().catch(() => ({ docs: [] as any[] }));
+    
+    const totalUsers = usersSnap.docs.length;
+    const totalPages = Math.ceil(totalUsers / limit);
+    
+    // Apply pagination
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    
+    const users = usersSnap.docs
+      .slice(startIndex, endIndex)
+      .map((d: any) => ({ id: d.id, ...d.data() }));
     const bannedUsers = bansSnap.docs.map((d: any) => d.id);
 
-    return NextResponse.json({ success: true, users, bannedUsers });
+    // Log the admin query for audit
+    await db.collection('system_logs').add({
+      type: 'ADMIN_USERS_QUERY',
+      message: `Admin queried users list`,
+      details: {
+        adminUid: user.uid,
+        page,
+        limit,
+        totalUsers,
+        querySize: users.length,
+      },
+      timestamp: Date.now(),
+    });
+
+    return NextResponse.json({ 
+      success: true, 
+      users, 
+      bannedUsers,
+      pagination: {
+        page,
+        limit,
+        totalUsers,
+        totalPages,
+        hasMore: page < totalPages,
+      }
+    });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
   }
@@ -36,6 +80,12 @@ export async function POST(request: NextRequest) {
   const user = await verifySuperAdmin(request);
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Rate limit by admin UID
+  const rateLimitResult = checkRateLimit(user.uid, RATE_LIMIT_CONFIGS.adminUsers);
+  if (!rateLimitResult.allowed) {
+    return rateLimitResponse(rateLimitResult.retryAfter);
   }
 
   try {

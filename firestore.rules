@@ -11,19 +11,10 @@ service cloud.firestore {
     }
     
     function isSuperAdmin() {
-      return isAuthenticated() && (
-        // Primary: Check custom claim
-        request.auth.token.role == 'superadmin' ||
-        // Fallback during migration: Check UID (remove after migration complete)
-        request.auth.uid == superAdminUid()
-      );
-    }
-    
-    // Legacy function - can be removed after custom claims migration is complete
-    function superAdminUid() {
-      // This is kept as a fallback during migration
-      // TODO: Remove after all superadmins have custom claims set
-      return 'rjAbnlO0deNZRavuHgfBsxRZTVY2';
+      // SECURITY: Only custom claims are used for superadmin verification.
+      // No hardcoded UIDs in publicly-readable rules.
+      // Server-side fallback (admin-auth.ts) uses SUPERADMIN_UID env var.
+      return isAuthenticated() && request.auth.token.role == 'superadmin';
     }
     
     function isOwner(restaurantId) {

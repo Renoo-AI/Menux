@@ -1,8 +1,20 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { checkBanned, getClientIp, bannedResponse } from '@/lib/security-defense';
+import { PROTECTED_ROUTES, getProtectedRouteType } from '@/config/protected-routes';
 
-// Rate limiting store (in-memory for development, use Redis in production)
+/**
+ * RATE LIMITING - PRODUCTION WARNING
+ * 
+ * Current implementation uses in-memory Map() which is NOT suitable for production:
+ * - Rate limits reset on every server restart/redeploy
+ * - Horizontal scaling (multiple instances) have independent stores
+ * - No persistence across deployments
+ * 
+ * BEFORE PRODUCTION DEPLOYMENT:
+ * Replace with Redis, Upstash, or a shared KV store.
+ * See: docs/security/RATE_LIMIT_PRODUCTION_NOTE.md
+ */
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 
 // Rate limit configuration
@@ -18,52 +30,6 @@ const RATE_LIMITS = {
   // Staff verification: 3 requests per 15 minutes (very strict)
   staffVerify: { windowMs: 15 * 60 * 1000, max: 3 },
 };
-
-// Route protection configuration
-const PROTECTED_ROUTES = {
-  // Admin routes require superadmin authentication
-  admin: {
-    paths: ['/admin'],
-    loginPath: '/admin/login',
-    sessionCookie: 'firebase-auth-token',
-  },
-  // Staff routes require staff authentication
-  staff: {
-    paths: ['/staff'],
-    loginPath: '/staff/login',
-    sessionCookie: 'staff-session',
-    excludePaths: ['/staff/login', '/staff/verify'],
-  },
-  // Dashboard routes require staff authentication with proper role
-  dashboard: {
-    paths: ['/dashboard'],
-    loginPath: '/staff/login',
-    sessionCookie: 'staff-session',
-  },
-};
-
-/**
- * Check if a path matches any protected route pattern
- */
-function getProtectedRouteType(pathname: string): { type: keyof typeof PROTECTED_ROUTES; config: typeof PROTECTED_ROUTES.admin } | null {
-  for (const [type, config] of Object.entries(PROTECTED_ROUTES)) {
-    for (const path of config.paths) {
-      // Check if pathname starts with the protected path
-      if (pathname.startsWith(path)) {
-        // Check if this path should be excluded
-        if ('excludePaths' in config && config.excludePaths) {
-          const isExcluded = config.excludePaths.some(excluded => pathname.startsWith(excluded));
-          if (isExcluded) continue;
-        }
-        // Exact match for the protected path itself (e.g., /admin but not /admin/login)
-        if (pathname === path || pathname.startsWith(path + '/')) {
-          return { type: type as keyof typeof PROTECTED_ROUTES, config };
-        }
-      }
-    }
-  }
-  return null;
-}
 
 /**
  * Check for authentication session
