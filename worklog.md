@@ -421,3 +421,77 @@ Remaining Security Tasks:
 - Implement server-side session validation for admin routes
 - Configure Firebase App Check for web
 - Add middleware protection for /staff/* routes
+
+---
+Task ID: 8
+Agent: Main Agent (Agent2)
+Task: CSS Design System Update - MenuxPRO Premium Café Identity
+
+Work Log:
+- Completely rewrote /src/app/globals.css with MenuxPRO premium café palette
+  - Core brand colors: Espresso #3A322D, Accent #C9A07E, Warm #D8B18C, Soft Beige #EFE4D8
+  - Surface colors: Background #FCFBF9 (warm cream, not harsh white)
+  - Primary: Espresso-based #3A322D (not generic SaaS pink/red)
+  - Secondary: Soft Beige #EFE4D8 (warm, elegant)
+  - Error: Muted #B85C4A (not harsh red)
+  - Success: Soft green #6B8E6B (not neon)
+  - Warning: Warm amber #A9795F
+- Added comprehensive dark mode tokens
+  - Warm espresso dark theme (#1C1A17 background)
+  - NOT pure black/pink - warm and elegant
+  - Proper contrast for all surface colors
+  - Updated shadows for dark mode depth
+- Added landing page tokens (lp-*)
+  - --lp-cream, --lp-paper, --lp-ink, --lp-ochre, --lp-terra
+  - Aligned with MenuxPRO warm palette
+  - Dark mode variants included
+- Added gradient and glass effect variables
+  - --gradient-primary: Espresso to warm brown
+  - --gradient-warm: Gold to cream
+  - --gradient-glass: Premium glass effect
+  - --glass-bg, --glass-border, --glass-blur
+- Added chart colors for analytics
+  - --chart-1 through --chart-5 (warm palette)
+- Added RTL support for Arabic
+  - Proper text alignment
+  - Corrected positioning for status indicators
+- Updated /tailwind.config.ts to sync with CSS
+  - All color tokens mapped to Tailwind
+  - Added lp-* color tokens
+  - Updated shadows to match CSS variables
+  - Added gradient backgrounds
+  - Updated animations
+- Verified landing page uses new tokens correctly
+- Ran lint: PASSED (only 1 font warning, pre-existing)
+
+Stage Summary:
+- Complete CSS design system overhaul
+- MenuxPRO now has premium café identity
+- NOT generic SaaS pink/red/blue
+- NOT cold corporate UI
+- Warm, elegant, Tunisian/Qatar hospitality ready
+- Luxury but simple aesthetic achieved
+- All existing components inherit new palette
+
+CSS Token Changes:
+- --background: #FCFBF9 (warm cream)
+- --foreground: #3A322D (espresso)
+- --primary: #3A322D (espresso, not rose)
+- --secondary: #EFE4D8 (soft beige)
+- --accent: #C9A07E (gold)
+- --error: #B85C4A (muted red)
+- --success: #6B8E6B (soft green)
+- --warning: #A9795F (warm amber)
+- Dark mode: #1C1A17 (warm espresso dark)
+
+Files Modified:
+- /src/app/globals.css (complete rewrite)
+- /tailwind.config.ts (synced with CSS)
+
+Security Note:
+The project still has security blockers that need to be addressed:
+1. Server-side admin route validation
+2. Middleware protection for staff routes
+3. Remove NEXT_PUBLIC_SUPERADMIN_UID
+4. Protect db:reset/seed scripts
+5. App Check / Functions for sensitive rate limits

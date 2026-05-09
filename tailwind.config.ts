@@ -12,107 +12,124 @@ const config: Config = {
     theme: {
         extend: {
             colors: {
-                // Menux Brand Colors
+                // ============================================
+                // MENUXPRO PREMIUM CAFÉ PALETTE
+                // Brand: Warm luxury meets Tunisian/Qatar hospitality
+                // ============================================
+                
+                // Core Brand Colors
                 background: '#FCFBF9',
                 espresso: '#3A322D',
                 'soft-beige': '#EFE4D8',
+                accent: '#C9A07E',
+                warm: '#D8B18C',
+                terra: '#A9795F',
+                olive: '#8FA48B',
                 white: '#FFFFFF',
                 
-                // Semantic colors from HTML designs
+                // Primary (Espresso-based)
                 primary: {
-                    DEFAULT: '#241d19',
-                    container: '#3a322d',
-                    fixed: '#eee0d8',
-                    'fixed-dim': '#d1c4bd',
+                    DEFAULT: '#3A322D',
+                    foreground: '#FCFBF9',
+                    container: '#5A4B42',
+                    fixed: '#EFE4D8',
+                    'fixed-dim': '#D8C4B8',
                 },
+                
+                // Secondary (Soft Beige/Warm)
                 secondary: {
-                    DEFAULT: '#79573a',
-                    container: '#ffd1ad',
-                    fixed: '#ffdcc1',
-                    'fixed-dim': '#eabe9a',
+                    DEFAULT: '#EFE4D8',
+                    foreground: '#3A322D',
+                    container: '#F7EFE7',
+                    fixed: '#E6C8A8',
+                    'fixed-dim': '#D8B18C',
                 },
-                tertiary: {
-                    DEFAULT: '#231e17',
-                    container: '#39332b',
-                    fixed: '#ece1d5',
-                    'fixed-dim': '#cfc5b9',
-                },
+                
+                // Surface Colors
                 surface: {
-                    DEFAULT: '#fef8f7',
-                    dim: '#ded9d8',
-                    bright: '#fef8f7',
-                    variant: '#e6e1e0',
-                    tint: '#665c57',
+                    DEFAULT: '#FFFFFF',
+                    dim: '#F4EEE7',
+                    bright: '#FFFFFF',
+                    tint: '#C9A07E',
                     container: {
-                        DEFAULT: '#f2edeb',
-                        low: '#f8f2f1',
-                        'lowest': '#ffffff',
-                        high: '#ece7e6',
-                        highest: '#e6e1e0',
+                        DEFAULT: '#F4EEE7',
+                        low: '#FAF6EF',
+                        lowest: '#FFFFFF',
+                        high: '#EFE4D8',
+                        highest: '#E8DED4',
                     },
                 },
+                
+                // Outline
                 outline: {
-                    DEFAULT: '#7f756f',
-                    variant: '#d1c4bd',
+                    DEFAULT: '#7A6D63',
+                    variant: '#E8DED4',
                 },
+                
+                // Error/Destructive (Muted, not harsh)
                 error: {
-                    DEFAULT: '#ba1a1a',
-                    container: '#ffdad6',
+                    DEFAULT: '#B85C4A',
+                    foreground: '#FFFFFF',
+                    container: '#FFF7F2',
                 },
-                inverse: {
-                    surface: '#32302f',
-                    primary: '#d1c4bd',
-                    'on-surface': '#f5f0ee',
+                
+                // Success (Soft green)
+                success: {
+                    DEFAULT: '#6B8E6B',
+                    foreground: '#FFFFFF',
+                    container: '#E8F0E8',
+                },
+                
+                // Warning (Warm amber/orange)
+                warning: {
+                    DEFAULT: '#A9795F',
+                    foreground: '#FFFFFF',
+                    container: '#FFF5EB',
                 },
                 
                 // Text colors
-                'on-primary': '#ffffff',
-                'on-secondary': '#ffffff',
-                'on-tertiary': '#ffffff',
-                'on-surface': '#1d1b1b',
-                'on-background': '#1d1b1b',
-                'on-surface-variant': '#4d4540',
-                'on-error': '#ffffff',
+                foreground: '#3A322D',
+                'on-surface': '#3A322D',
+                'on-surface-variant': '#7A6D63',
+                'on-background': '#3A322D',
                 
-                // Container text colors
-                'on-primary-container': '#a69a93',
-                'on-secondary-container': '#79583b',
-                'on-tertiary-container': '#a49b90',
-                'on-error-container': '#93000a',
-                
-                // Fixed variant text colors
-                'on-primary-fixed': '#211a16',
-                'on-secondary-fixed': '#2d1601',
-                'on-tertiary-fixed': '#201b14',
-                'on-primary-fixed-variant': '#4e4540',
-                'on-secondary-fixed-variant': '#5e4025',
-                'on-tertiary-fixed-variant': '#4c463d',
-                
-                // Legacy shadcn/ui colors (for compatibility)
-                foreground: '#1d1b1b',
+                // Legacy shadcn/ui compatibility
                 card: {
-                    DEFAULT: '#ffffff',
-                    foreground: '#1d1b1b',
+                    DEFAULT: '#FFFFFF',
+                    foreground: '#3A322D',
                 },
                 popover: {
-                    DEFAULT: '#ffffff',
-                    foreground: '#1d1b1b',
+                    DEFAULT: '#FFFFFF',
+                    foreground: '#3A322D',
                 },
                 muted: {
-                    DEFAULT: '#f2edeb',
-                    foreground: '#4d4540',
-                },
-                accent: {
-                    DEFAULT: '#C9A07E',
-                    foreground: '#241d19',
+                    DEFAULT: '#F4EEE7',
+                    foreground: '#7A6D63',
                 },
                 destructive: {
-                    DEFAULT: '#ba1a1a',
-                    foreground: '#ffffff',
+                    DEFAULT: '#B85C4A',
+                    foreground: '#FFFFFF',
                 },
-                border: '#d1c4bd',
-                input: '#d1c4bd',
+                border: '#E8DED4',
+                input: '#E8DED4',
                 ring: '#C9A07E',
+                
+                // Landing Page Tokens
+                lp: {
+                    cream: '#FCFBF9',
+                    'cream-2': '#EFE4D8',
+                    paper: '#FAF6EF',
+                    ink: '#3A322D',
+                    'ink-2': '#51453D',
+                    muted: '#7A6D63',
+                    line: 'rgba(58,50,45,0.07)',
+                    'line-2': 'rgba(58,50,45,0.14)',
+                    indigo: '#3A322D',
+                    'indigo-2': '#5A4B42',
+                    ochre: '#C9A07E',
+                    'ochre-2': '#E6C8A8',
+                    terra: '#A9795F',
+                },
             },
             fontFamily: {
                 display: ['Playfair Display', 'serif'],
@@ -140,27 +157,76 @@ const config: Config = {
                 'section-padding': '120px',
             },
             borderRadius: {
-                DEFAULT: '0.25rem',
-                lg: '0.5rem',
-                xl: '0.75rem',
-                '2xl': '1rem',
-                '3xl': '1.5rem',
-                '4xl': '2rem',
+                DEFAULT: '0.5rem',
+                sm: '0.5rem',
+                md: '1rem',
+                lg: '1.5rem',
+                xl: '2rem',
+                '2xl': '2.5rem',
+                '3xl': '3rem',
+                '4xl': '4rem',
                 full: '9999px',
             },
             boxShadow: {
-                'luxury': '0 10px 40px -10px rgba(58, 50, 45, 0.15)',
-                'card': '0px 10px 30px rgba(58, 50, 45, 0.05)',
-                'card-hover': '0px 20px 40px rgba(58, 50, 45, 0.1)',
+                'soft': '0 8px 24px rgba(58, 50, 45, 0.08)',
+                'elevated': '0 18px 45px rgba(58, 50, 45, 0.14)',
+                'luxury': '0 24px 80px rgba(58, 50, 45, 0.08)',
+                'card': '0px 4px 24px rgba(58, 50, 45, 0.04)',
+                'card-hover': '0px 8px 40px rgba(58, 50, 45, 0.08)',
+                'button': '0px 4px 12px rgba(58, 50, 45, 0.08)',
+                'dropdown': '0px 8px 32px rgba(58, 50, 45, 0.12)',
+                'glow': '0 0 28px rgba(201, 160, 126, 0.18)',
+                'glow-primary': '0 0 28px rgba(201, 160, 126, 0.22)',
+            },
+            backgroundImage: {
+                'gradient-primary': 'linear-gradient(135deg, #3A322D, #5A4B42)',
+                'gradient-warm': 'linear-gradient(135deg, #C9A07E, #E6C8A8)',
+                'gradient-glass': 'linear-gradient(135deg, rgba(255,255,255,0.72), rgba(252,251,249,0.42))',
+                'gradient-menux': 'linear-gradient(180deg, #FCFBF9 0%, #EFE4D8 100%)',
             },
             animation: {
                 'pulse-border': 'pulse-border 2s infinite',
+                'fade-in': 'fade-in 0.3s ease-out forwards',
+                'slide-in-up': 'slide-in-up 0.4s ease-out forwards',
+                'slide-in-right': 'slide-in-right 0.3s ease-out forwards',
+                'scale-up': 'scale-up 0.2s ease-out forwards',
+                'shimmer': 'shimmer 1.5s infinite',
+                'float': 'float 3s ease-in-out infinite',
+                'breathing': 'breathing 3s ease-in-out infinite',
             },
             keyframes: {
                 'pulse-border': {
                     '0%': { boxShadow: '0 0 0 0 rgba(201, 160, 126, 0.4)' },
                     '70%': { boxShadow: '0 0 0 10px rgba(201, 160, 126, 0)' },
                     '100%': { boxShadow: '0 0 0 0 rgba(201, 160, 126, 0)' },
+                },
+                'fade-in': {
+                    from: { opacity: '0' },
+                    to: { opacity: '1' },
+                },
+                'slide-in-up': {
+                    from: { transform: 'translateY(20px)', opacity: '0' },
+                    to: { transform: 'translateY(0)', opacity: '1' },
+                },
+                'slide-in-right': {
+                    from: { transform: 'translateX(100%)', opacity: '0' },
+                    to: { transform: 'translateX(0)', opacity: '1' },
+                },
+                'scale-up': {
+                    from: { transform: 'scale(0.95)', opacity: '0' },
+                    to: { transform: 'scale(1)', opacity: '1' },
+                },
+                'shimmer': {
+                    '0%': { backgroundPosition: '-200% 0' },
+                    '100%': { backgroundPosition: '200% 0' },
+                },
+                'float': {
+                    '0%, 100%': { transform: 'translateY(0)' },
+                    '50%': { transform: 'translateY(-10px)' },
+                },
+                'breathing': {
+                    '0%, 100%': { transform: 'scale(1)', opacity: '1' },
+                    '50%': { transform: 'scale(1.02)', opacity: '0.9' },
                 },
             },
         },
