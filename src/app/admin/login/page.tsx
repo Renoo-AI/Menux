@@ -11,7 +11,7 @@ import {
 } from 'firebase/auth';
 import { auth, db, SUPERADMIN_UID } from '@/lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
-import { ShieldAlert, Mail, Lock, Loader2, AlertCircle, WifiOff, CloudOff } from 'lucide-react';
+import { ShieldAlert, Mail, Lock, Loader2, AlertCircle, WifiOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -191,17 +191,17 @@ export default function AdminLoginPage() {
   // Loading state while checking auth
   if (checkingAuth) {
     return (
-      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <div className="text-center">
-          <ShieldAlert className="w-12 h-12 text-[#3A322D] mx-auto mb-4 animate-pulse" />
-          <p className="text-[#3A322D]/60 font-medium">Verifying authorization...</p>
+          <ShieldAlert className="w-12 h-12 text-espresso mx-auto mb-4 animate-pulse" />
+          <p className="text-on-surface-variant font-medium">Verifying authorization...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden p-4 sm:p-6 bg-[#FAFAFA]">
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden p-4 sm:p-6 bg-surface">
       {/* Offline Banner */}
       {!isOnline && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500 text-white py-2 px-4 text-center text-sm font-medium flex items-center justify-center gap-2">
@@ -211,24 +211,24 @@ export default function AdminLoginPage() {
       )}
       
       {/* Ambient Decor */}
-      <div className="absolute filter blur-[100px] -z-10 opacity-30 rounded-full w-[400px] h-[400px] bg-[#C9A07E] top-[-10%] right-[-5%]" />
-      <div className="absolute filter blur-[100px] -z-10 opacity-20 rounded-full w-[300px] h-[300px] bg-[#EFE4D8] bottom-[-5%] left-[-5%]" />
+      <div className="absolute filter blur-[100px] -z-10 opacity-30 rounded-full w-[400px] h-[400px] bg-accent top-[-10%] right-[-5%]" />
+      <div className="absolute filter blur-[100px] -z-10 opacity-20 rounded-full w-[300px] h-[300px] bg-soft-beige bottom-[-5%] left-[-5%]" />
       
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="max-w-md w-full bg-white rounded-[2rem] sm:rounded-[3.5rem] shadow-2xl shadow-[#3A322D]/5 border border-[#EFE4D8] p-8 sm:p-10 md:p-14"
+        className="max-w-md w-full bg-surface-container-lowest rounded-[2rem] sm:rounded-[3.5rem] shadow-luxury border border-outline-variant p-8 sm:p-10 md:p-14"
       >
         {/* Header */}
         <div className="text-center mb-8 sm:mb-10">
-          <div className="w-16 h-16 bg-[#3A322D] text-[#C9A07E] rounded-[1.25rem] flex items-center justify-center font-black text-2xl mx-auto mb-6 shadow-xl">
+          <div className="w-16 h-16 bg-espresso text-accent rounded-[1.25rem] flex items-center justify-center font-black text-2xl mx-auto mb-6 shadow-xl">
             <ShieldAlert className="w-8 h-8" />
           </div>
-          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#3A322D] tracking-tight">
-            Menux<span className="text-[#C9A07E]">SEC</span>
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-espresso tracking-tight">
+            Menux<span className="text-accent">SEC</span>
           </h1>
-          <p className="text-[#3A322D]/50 font-medium mt-2 text-sm">
+          <p className="text-on-surface-variant font-medium mt-2 text-sm">
             Administrative Access Portal
           </p>
         </div>
@@ -238,7 +238,7 @@ export default function AdminLoginPage() {
           <motion.div 
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-2xl mb-6 text-xs font-bold uppercase tracking-tight flex items-start gap-3"
+            className="bg-error-container border border-error text-on-error-container p-4 rounded-2xl mb-6 text-xs font-bold uppercase tracking-tight flex items-start gap-3"
           >
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
             <span>{error}</span>
@@ -248,11 +248,11 @@ export default function AdminLoginPage() {
         {/* Email/Password Form */}
         <form onSubmit={handleEmailLogin} className="flex flex-col gap-4 mb-4">
           <div className="relative">
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#3A322D]/30" />
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant/50" />
             <Input
               type="email"
               placeholder="Email Address"
-              className="h-14 bg-[#FAFAFA] border-none rounded-2xl pl-12 pr-5 text-[#3A322D] placeholder:text-[#3A322D]/40 focus:ring-2 focus:ring-[#C9A07E]"
+              className="h-14 bg-surface-container border-none rounded-2xl pl-12 pr-5 text-espresso placeholder:text-on-surface-variant/40 focus:ring-2 focus:ring-accent"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading || googleLoading}
@@ -260,11 +260,11 @@ export default function AdminLoginPage() {
           </div>
           
           <div className="relative">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#3A322D]/30" />
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant/50" />
             <Input
               type="password"
               placeholder="Password"
-              className="h-14 bg-[#FAFAFA] border-none rounded-2xl pl-12 pr-5 text-[#3A322D] placeholder:text-[#3A322D]/40 focus:ring-2 focus:ring-[#C9A07E]"
+              className="h-14 bg-surface-container border-none rounded-2xl pl-12 pr-5 text-espresso placeholder:text-on-surface-variant/40 focus:ring-2 focus:ring-accent"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading || googleLoading}
@@ -274,7 +274,7 @@ export default function AdminLoginPage() {
           <Button
             type="submit"
             disabled={loading || googleLoading}
-            className="h-14 bg-[#C9A07E] hover:bg-[#B08F6A] text-white rounded-2xl font-bold text-sm uppercase tracking-widest shadow-xl shadow-[#C9A07E]/20 disabled:opacity-70"
+            className="h-14 bg-accent hover:bg-accent/90 text-on-primary rounded-2xl font-bold text-sm uppercase tracking-widest shadow-xl shadow-accent/20 disabled:opacity-70"
           >
             {loading ? (
               <>
@@ -289,9 +289,9 @@ export default function AdminLoginPage() {
 
         {/* Divider */}
         <div className="flex items-center gap-4 my-6">
-          <div className="flex-1 h-px bg-[#EFE4D8]" />
-          <span className="text-[10px] font-bold uppercase text-[#3A322D]/30 tracking-widest">OR</span>
-          <div className="flex-1 h-px bg-[#EFE4D8]" />
+          <div className="flex-1 h-px bg-outline-variant" />
+          <span className="text-[10px] font-bold uppercase text-on-surface-variant/50 tracking-widest">OR</span>
+          <div className="flex-1 h-px bg-outline-variant" />
         </div>
 
         {/* Google Login */}
@@ -300,7 +300,7 @@ export default function AdminLoginPage() {
           variant="outline"
           onClick={handleGoogleLogin}
           disabled={loading || googleLoading}
-          className="w-full h-14 bg-[#3A322D] hover:bg-[#5A4A3D] text-white rounded-2xl font-bold text-sm uppercase tracking-widest shadow-xl shadow-[#3A322D]/10 disabled:opacity-70 border-0 group"
+          className="w-full h-14 bg-espresso hover:bg-primary text-on-primary rounded-2xl font-bold text-sm uppercase tracking-widest shadow-xl shadow-espresso/10 disabled:opacity-70 border-0 group"
         >
           {googleLoading ? (
             <>
@@ -321,8 +321,8 @@ export default function AdminLoginPage() {
         </Button>
         
         {/* Footer */}
-        <div className="mt-8 pt-6 border-t border-[#EFE4D8]">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#3A322D]/30 text-center">
+        <div className="mt-8 pt-6 border-t border-outline-variant">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/50 text-center">
             Enhanced Security • Authorized Personnel Only
           </p>
         </div>

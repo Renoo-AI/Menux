@@ -196,3 +196,49 @@ Next Phase Recommendations:
 - Add sound effects for interactions (optional)
 - Add haptic feedback for mobile (optional)
 - Create order history page for customers
+
+---
+Task ID: 5
+Agent: Main Agent
+Task: Complete CSS Consistency Across All Pages
+
+Work Log:
+- Analyzed all 25 pages in the project for CSS consistency
+- Fixed login pages to use CSS variables instead of hardcoded colors:
+  - /src/app/staff/login/page.tsx - Replaced #FCFBF9, #3A322D, #C9A07E, #EFE4D8 with semantic CSS variables
+  - /src/app/admin/login/page.tsx - Replaced hardcoded hex colors with bg-surface, text-espresso, etc.
+  - /src/app/staff/dashboard/page.tsx - Updated all color references to use design system
+- Added DashboardLayout wrapper to 5 dashboard pages that were missing it:
+  - /src/app/dashboard/waitlist/page.tsx - Added DashboardLayout + TopAppBar, replaced text-muted-foreground
+  - /src/app/dashboard/security/page.tsx - Added DashboardLayout + TopAppBar, replaced text-muted-foreground
+  - /src/app/dashboard/promotions/page.tsx - Added DashboardLayout + TopAppBar
+  - /src/app/dashboard/specials/page.tsx - Added DashboardLayout + TopAppBar
+  - /src/app/dashboard/floor-plan/page.tsx - Added DashboardLayout + TopAppBar
+- Verified landing page already uses CSS variables correctly
+- Verified login/page.tsx already uses CSS variables correctly
+- Verified customer-facing menu pages have intentional custom styling (preserved)
+
+Stage Summary:
+- All 25 pages now have consistent CSS
+- Login pages use semantic CSS variables (bg-surface, text-espresso, text-accent, etc.)
+- Dashboard pages properly wrapped in DashboardLayout + TopAppBar
+- Design system is fully utilized across the application
+- Lint passes with only 1 font warning (non-critical)
+
+CSS Variable Mappings Applied:
+- #FCFBF9 / #FAFAFA → bg-surface, bg-background
+- #3A322D → text-espresso, bg-espresso, text-primary
+- #C9A07E → text-accent, bg-accent, text-secondary
+- #EFE4D8 → bg-soft-beige, border-soft-beige
+- #5A4A3D → text-on-surface-variant
+- text-muted-foreground → text-on-surface-variant
+
+Files Modified: 8 total
+- staff/login/page.tsx
+- staff/dashboard/page.tsx
+- admin/login/page.tsx
+- dashboard/waitlist/page.tsx
+- dashboard/security/page.tsx
+- dashboard/promotions/page.tsx
+- dashboard/specials/page.tsx
+- dashboard/floor-plan/page.tsx

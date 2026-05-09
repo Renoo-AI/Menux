@@ -194,26 +194,26 @@ export default function StaffDashboardPage() {
 
   if (sessionLoading || !isStaffAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FCFBF9]">
-        <Loader2 className="h-8 w-8 animate-spin text-[#3A322D]" />
+      <div className="min-h-screen flex items-center justify-center bg-surface">
+        <Loader2 className="h-8 w-8 animate-spin text-espresso" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#FCFBF9]">
+    <div className="min-h-screen bg-surface">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white border-b border-[#EFE4D8] shadow-sm">
+      <header className="sticky top-0 z-50 bg-surface-container-lowest border-b border-outline-variant shadow-elevated">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo & Restaurant */}
             <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-[#3A322D] to-[#5A4A3D] flex items-center justify-center">
-                <Coffee className="h-5 w-5 text-[#C9A07E]" />
+              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-espresso to-primary flex items-center justify-center">
+                <Coffee className="h-5 w-5 text-accent" />
               </div>
               <div>
-                <h1 className="font-serif font-bold text-[#3A322D]">{session?.restaurantName || 'MenuxPro'}</h1>
-                <p className="text-xs text-[#5A4A3D]">Cashier Dashboard</p>
+                <h1 className="font-serif font-bold text-espresso">{session?.restaurantName || 'MenuxPro'}</h1>
+                <p className="text-xs text-on-surface-variant">Cashier Dashboard</p>
               </div>
             </div>
             
@@ -222,12 +222,12 @@ export default function StaffDashboardPage() {
               {/* Connection Status */}
               <div className="flex items-center gap-2">
                 {connectionStatus === 'connected' ? (
-                  <Badge className="bg-green-50 text-green-700 border-green-200 flex items-center gap-1">
+                  <Badge className="bg-success-container text-success border-success flex items-center gap-1">
                     <Wifi className="w-3 h-3" />
                     Live
                   </Badge>
                 ) : (
-                  <Badge className="bg-red-50 text-red-700 border-red-200 flex items-center gap-1">
+                  <Badge className="bg-error-container text-on-error-container border-error flex items-center gap-1">
                     <WifiOff className="w-3 h-3" />
                     Offline
                   </Badge>
@@ -238,7 +238,7 @@ export default function StaffDashboardPage() {
                 variant="ghost"
                 size="icon"
                 onClick={() => window.location.reload()}
-                className="text-[#5A4A3D] hover:text-[#3A322D]"
+                className="text-on-surface-variant hover:text-espresso"
               >
                 <RefreshCw className="h-5 w-5" />
               </Button>
@@ -246,21 +246,21 @@ export default function StaffDashboardPage() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-full bg-[#3A322D] flex items-center justify-center">
-                      <User className="h-4 w-4 text-white" />
+                    <div className="h-8 w-8 rounded-full bg-espresso flex items-center justify-center">
+                      <User className="h-4 w-4 text-on-primary" />
                     </div>
-                    <span className="hidden sm:inline text-[#3A322D]">{session?.staffName}</span>
+                    <span className="hidden sm:inline text-espresso">{session?.staffName}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuLabel>
                     <div>
                       <p className="font-medium">{session?.staffName}</p>
-                      <p className="text-xs text-gray-500 capitalize">{session?.role}</p>
+                      <p className="text-xs text-on-surface-variant capitalize">{session?.role}</p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                  <DropdownMenuItem onClick={handleLogout} className="text-error">
                     <LogOut className="h-4 w-4 mr-2" />
                     Sign Out
                   </DropdownMenuItem>
@@ -275,7 +275,7 @@ export default function StaffDashboardPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-[#3A322D]" />
+            <Loader2 className="h-8 w-8 animate-spin text-espresso" />
           </div>
         ) : (
           <TableGrid
@@ -292,7 +292,7 @@ export default function StaffDashboardPage() {
       <Dialog open={showReasonDialog} onOpenChange={setShowReasonDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
+            <DialogTitle className="flex items-center gap-2 text-error">
               <AlertTriangle className="h-5 w-5" />
               {reasonAction?.action === 'reject' ? 'Reject Order' : 'Cancel Order'}
             </DialogTitle>
