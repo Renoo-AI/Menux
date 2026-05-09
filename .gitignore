@@ -50,5 +50,29 @@ test
 prompt
 
 server.log
+
 # Skills directory
 /skills/
+
+# Temp and junk files
+screenshot*.png
+screenshot*.jpg
+/download/
+/upload/
+/agent-ctx/
+*.zip
+*.tar.gz
+
+# IDE and editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Firebase
+firebase-debug.log
+.ui-debug.log
+
+# Test outputs
+/test-results/
+/playwright-report/

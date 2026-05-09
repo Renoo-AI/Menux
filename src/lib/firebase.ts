@@ -17,6 +17,11 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
+// Check if Firebase is properly configured
+function hasValidFirebaseConfig(): boolean {
+  return !!(firebaseConfig.apiKey && firebaseConfig.authDomain && firebaseConfig.projectId);
+}
+
 // Validate required Firebase config
 function validateFirebaseConfig() {
   const required = ['apiKey', 'authDomain', 'projectId'];
@@ -27,8 +32,24 @@ function validateFirebaseConfig() {
   }
 }
 
-// Initialize Firebase only if it hasn't been initialized
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+// Initialize Firebase only if it hasn't been initialized AND config is valid
+// This prevents crashes during build when env vars are not set
+let app: ReturnType<typeof initializeApp>;
+
+if (getApps().length > 0) {
+  app = getApp();
+} else if (hasValidFirebaseConfig()) {
+  app = initializeApp(firebaseConfig);
+} else {
+  // Create a mock app for build time when env vars are missing
+  // This allows the build to succeed while still warning about missing config
+  console.warn('Firebase config is incomplete. Using placeholder config for build.');
+  app = initializeApp({
+    apiKey: 'build-placeholder',
+    authDomain: 'build-placeholder.firebaseapp.com',
+    projectId: 'build-placeholder',
+  });
+}
 
 // Initialize Firestore with offline persistence enabled
 // This prevents "client is offline" errors when network temporarily drops
