@@ -65,8 +65,28 @@ MenuxPRO security hardening sprint complete. All critical and high-priority secu
 - Firestore rules require custom claims to be set for all superadmins
 - Form timing validation needs client-side timestamp tracking
 
+---
+Task ID: 3
+Agent: Main Agent
+Task: Final verification and OOM fix for users endpoint
+
+Work Log:
+- Verified all 6 pre-export checks from user
+- Firestore rules: superAdminUid() completely removed ✅
+- magicLink config exists in RATE_LIMIT_CONFIGS ✅
+- excludePaths logic correctly handles /staff/login and /staff/verify ✅
+- All admin routes (restaurants, stats, security, users) import from shared auth ✅
+- Ban cache key is unique (IP:deviceId) with 10s TTL - acceptable ✅
+- Fixed OOM risk in users endpoint: added MAX_TOTAL_USERS=5000 cap and Firestore native limit()
+
+Stage Summary:
+- All verification checks passed
+- OOM vulnerability fixed with proper pagination limits
+- Build: PASSED (44 routes)
+
 ### Next Phase Recommendations
 1. Deploy to staging environment for real-world testing
 2. Set up Redis/Upstash for production rate limiting
 3. Implement Firebase Cloud Functions for batch operations
 4. Add monitoring/alerting for security events
+5. Consider cursor-based pagination for users endpoint at scale

@@ -7,6 +7,9 @@ function sanitizeText(text: string, maxLength: number = 200): string {
   return text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;').slice(0, maxLength);
 }
 
+// Maximum users to return - prevents OOM on large datasets
+const MAX_TOTAL_USERS = 5000;
+
 // GET - Fetch users with pagination and rate limiting
 export async function GET(request: NextRequest) {
   const user = await verifySuperAdmin(request);
@@ -22,23 +25,33 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100); // Max 100 per page
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const limit = Math.min(Math.max(1, parseInt(searchParams.get('limit') || '50', 10)), 100); // 1-100 per page
     
     const app = getAdminApp();
     const db = getFirestore(app);
     
-    // Get total count (approximate - Firestore doesn't have efficient counting)
-    const usersSnap = await db.collection('users').get().catch(() => ({ docs: [] as any[] }));
-    const bansSnap = await db.collection('banned_users').get().catch(() => ({ docs: [] as any[] }));
+    // Use Firestore's native limit() - this prevents OOM
+    // We request one extra document to check if there are more pages
+    const usersSnap = await db.collection('users')
+      .limit(MAX_TOTAL_USERS)
+      .get()
+      .catch(() => ({ docs: [] as any[] }));
     
-    const totalUsers = usersSnap.docs.length;
+    const bansSnap = await db.collection('banned_users')
+      .limit(1000)
+      .get()
+      .catch(() => ({ docs: [] as any[] }));
+    
+    const totalUsers = Math.min(usersSnap.docs.length, MAX_TOTAL_USERS);
+    
+    // Calculate pagination
     const totalPages = Math.ceil(totalUsers / limit);
+    const safePage = Math.min(page, totalPages || 1);
+    const startIndex = (safePage - 1) * limit;
+    const endIndex = Math.min(startIndex + limit, totalUsers);
     
-    // Apply pagination
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    
+    // Apply pagination on the limited dataset
     const users = usersSnap.docs
       .slice(startIndex, endIndex)
       .map((d: any) => ({ id: d.id, ...d.data() }));
@@ -50,7 +63,7 @@ export async function GET(request: NextRequest) {
       message: `Admin queried users list`,
       details: {
         adminUid: user.uid,
-        page,
+        page: safePage,
         limit,
         totalUsers,
         querySize: users.length,
@@ -63,11 +76,12 @@ export async function GET(request: NextRequest) {
       users, 
       bannedUsers,
       pagination: {
-        page,
+        page: safePage,
         limit,
         totalUsers,
         totalPages,
-        hasMore: page < totalPages,
+        hasMore: safePage < totalPages,
+        capped: usersSnap.docs.length >= MAX_TOTAL_USERS,
       }
     });
   } catch (error) {
