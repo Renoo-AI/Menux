@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { checkBanned, getClientIp, bannedResponse } from '@/lib/security-defense';
+import { getClientIp, bannedResponse } from '@/lib/security-edge';
 import { PROTECTED_ROUTES, getProtectedRouteType } from '@/config/protected-routes';
 
 /**
@@ -88,15 +88,8 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  // Get client IP for ban checking
+  // Get client IP
   const clientIp = getClientIp(request);
-  
-  // Check if IP is banned (for all requests)
-  const banCheck = await checkBanned(request);
-  if (banCheck.isBanned) {
-    console.warn(`Blocked banned IP: ${clientIp} - ${banCheck.reason}`);
-    return bannedResponse(banCheck.reason || 'Access denied');
-  }
   
   // Check for protected routes (non-API routes only - API routes handle their own auth)
   if (!pathname.startsWith('/api/')) {
